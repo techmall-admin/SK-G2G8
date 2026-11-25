@@ -118,6 +118,12 @@ header .sp{flex:1}
 .neg{color:var(--bad)}
 .pos{color:var(--ok)}
 .plan{margin-top:18px}
+.road.compact{min-width:0}
+.road.compact td{white-space:normal}
+.road tr.done td{color:var(--faint)}
+.road .step{display:inline-flex;vertical-align:middle}
+.road .step button{width:26px;height:26px;font-size:14px}
+.road .step output{min-width:28px;font-size:13px}
 .plan-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:18px;align-items:start;margin-bottom:16px}
 @media (max-width:900px){.plan-grid{grid-template-columns:minmax(0,1fr)}}
 .in select{border:0;outline:0;background:transparent;font:inherit;font-weight:500;padding:8px 10px;width:100%;color:var(--fg)}
@@ -241,6 +247,23 @@ details li{margin:3px 0}
     </div>
     <div class="tbl-wrap"><table class="road" id="plan-history"></table></div>
   </section>
+
+  <section class="card plan" id="clan-card">
+    <h2><span class="n">4</span>Clan plan: G2 → G3 → G5 → G8</h2>
+    <p class="sub">The HKL plan. Save Wolf coins at G2, then jump grades during Ragnarök. Set the Ragnarök you are on. Logging an event in step 3 moves it forward.</p>
+    <div class="plan-grid">
+      <div class="col">
+        <div class="fields">
+          <div class="f"><label for="clan-rag">Next Ragnarök (season #)</label><div class="in"><input id="clan-rag" type="number" min="1" max="16" inputmode="numeric"></div></div>
+        </div>
+        <div id="clan-summary" class="col" style="gap:10px"></div>
+      </div>
+      <div class="tbl-wrap"><table class="road compact" id="clan-steps"></table></div>
+    </div>
+    <div class="group-label">Before each jump</div>
+    <p class="sub" style="margin-bottom:8px">What you must hold before each jump. Change the shop buys to see how much VP you then need from battles, Hydra and other events. Later grades assume no research done yet.</p>
+    <div class="tbl-wrap"><table class="road" id="jumps"></table></div>
+  </section>
 </div>
 
 <script>
@@ -268,8 +291,8 @@ var SHOP={G5:{ld:4.66,fx:0,wc:30,dc:1.3,fc:0},
 // ---------- state ----------
 var SMALL={vp:'M',dragon:'K'}; // fields that can be typed in a unit 1000× smaller
 function clone(o){return JSON.parse(JSON.stringify(o));}
-var EXAMPLE={plan:{target:8,left:12,log:[{w:150,d:1.1,needW:118,needD:0.9},{w:90,d:0.6,needW:118,needD:0.9}]},logDUnit:'M',vpUnit:'B',dragonUnit:'M',grade:4,vp:1.2,acc:22,hero:35,proj:18000,gold:100000,wolf:40,dragon:2,forest:0,wood:30,iron:25,stone:28,t:4,m:2,g:1,pct:0};
-var EMPTY={plan:{target:8,left:10,log:[]},logDUnit:'M',vpUnit:'B',dragonUnit:'M',grade:1,vp:0,acc:1,hero:1,proj:0,gold:0,wolf:0,dragon:0,forest:0,wood:0,iron:0,stone:0,t:0,m:0,g:0,pct:0};
+var EXAMPLE={clan:{rag:7},jumps:{G5:1,G6:1,G7:1,G8:3},plan:{target:8,left:12,log:[{w:150,d:1.1,needW:118,needD:0.9},{w:90,d:0.6,needW:118,needD:0.9}]},logDUnit:'M',vpUnit:'B',dragonUnit:'M',grade:4,vp:1.2,acc:22,hero:35,proj:18000,gold:100000,wolf:40,dragon:2,forest:0,wood:30,iron:25,stone:28,t:4,m:2,g:1,pct:0};
+var EMPTY={clan:{rag:1},jumps:{G5:1,G6:1,G7:1,G8:3},plan:{target:8,left:10,log:[]},logDUnit:'M',vpUnit:'B',dragonUnit:'M',grade:1,vp:0,acc:1,hero:1,proj:0,gold:0,wolf:0,dragon:0,forest:0,wood:0,iron:0,stone:0,t:0,m:0,g:0,pct:0};
 var FIELDS=['vp','acc','hero','proj','gold','wolf','dragon','forest','wood','iron','stone'];
 var S, isExample=false;
 function load(){try{var raw=localStorage.getItem('gp-state');if(raw){S=Object.assign(clone(EMPTY),JSON.parse(raw));return;}}catch(e){}
@@ -460,7 +483,71 @@ function totals(target){
 function fD(v){return S.dragonUnit==='K'?fN(v*1000)+'K':fM(v);}
 var targetSel=document.getElementById('plan-target');
 
+// ---------- Clan plan (HKL) ----------
+var CLAN=[{a:1,b:3,step:'Save resources',inc:0},{a:4,b:4,step:'Rapid Development',inc:160},{a:5,b:5,step:'G2 / S3 / M4',inc:160},
+  {a:6,b:9,step:'Stay G2 / S4 / M5',inc:160},{a:10,b:10,step:'Jump to G3',inc:220,jump:'G3'},{a:11,b:11,step:'Jump to G5',inc:0,jump:'G5'},
+  {a:12,b:12,step:'Jump to G6',inc:0,jump:'G6'},{a:13,b:13,step:'Jump to G7',inc:0,jump:'G7'},{a:14,b:16,step:'Buy Wolf VP packs, unlock G8',inc:0,jump:'G8'}];
+var CLAN_SAVE_GOAL=960, CLAN_SAVE_END=9;
+var JUMP_RAG={G3:'10',G4:'11',G5:'11',G6:'12',G7:'13',G8:'14–16'};
+function jumpCost(g){return SHOP[g]?S.jumps[g]*SHOP[g].wc:0;}
+function holdFrom(n){var s=0;for(var k=Math.max(n,5);k<=8;k++)s+=jumpCost('G'+k);return s;} // Wolf to hold before jumping to Gn
+function planBalanceAfter(r){var bal=0;CLAN.forEach(function(c){for(var x=c.a;x<=c.b&&x<=r;x++){bal+=c.inc;
+  if(c.jump&&x===c.a)bal-=jumpCost(c.jump);}});return bal;}
+
+function renderClan(){
+  var r=S.clan.rag, el=document.getElementById('clan-summary'), rEl=document.getElementById('clan-rag');
+  if(document.activeElement!==rEl)rEl.value=r;
+  var total=holdFrom(5), out=[];
+  if(r<=CLAN_SAVE_END){
+    var left=CLAN_SAVE_END-Math.max(r,4)+1, need=Math.max(CLAN_SAVE_GOAL-S.wolf,0), per=need/left;
+    var expected=planBalanceAfter(r-1), diff=S.wolf-expected;
+    out.push('<div class="bigs two"><div class="big"><div class="v">'+(need?fM(per):'0')+'</div><div class="k">Wolf per event to reach '+fM(CLAN_SAVE_GOAL)+' by Ragnarök '+CLAN_SAVE_END+'</div><div class="s">'+fM(need)+' to go, '+left+' saving event'+(left===1?'':'s')+' left (Rag '+Math.max(r,4)+'–'+CLAN_SAVE_END+')</div></div>'+
+      '<div class="big"><div class="v '+(diff>=0?'pos':'neg')+'">'+(diff>=0?'+':'−')+fM(Math.abs(diff))+'</div><div class="k">vs the plan</div><div class="s">Plan: '+fM(expected)+' before Rag '+r+'. You: '+fM(S.wolf)+'</div></div></div>');
+    if(!need)out.push('<div class="alert ok">You already have '+fM(CLAN_SAVE_GOAL)+'. Ready for the G3 jump at Ragnarök 10.</div>');
+    else if(per>160.005)out.push('<div class="alert bad">The plan expects 160M per event. You now need '+fM(per)+', '+fM(per-160)+' more per event.</div>');
+    else out.push('<div class="alert ok">On track. The plan gives 160M per event and you need '+fM(per)+'.</div>');
+  }else{
+    var nextG=S.grade<3?3:Math.min(S.grade+1,8), hold=holdFrom(Math.max(nextG,5));
+    out.push('<div class="bigs two"><div class="big"><div class="v">'+fM(hold)+'</div><div class="k">Wolf to hold for the jumps left</div></div>'+
+      '<div class="big"><div class="v '+(S.wolf>=hold?'pos':'neg')+'">'+(S.wolf>=hold?'Enough':'−'+fM(hold-S.wolf))+'</div><div class="k">You have '+fM(S.wolf)+'</div></div></div>');
+  }
+  out.push('<p class="note" style="margin:0">Jump costs with your shop buys: '+fM(total)+'. Plan savings '+fM(CLAN_SAVE_GOAL)+' + '+fM(220)+' at G3 = '+fM(CLAN_SAVE_GOAL+220)+', so '+
+    (CLAN_SAVE_GOAL+220>=total?fM(CLAN_SAVE_GOAL+220-total)+' spare.':'<span class="neg">'+fM(total-CLAN_SAVE_GOAL-220)+' short.</span>')+'</p>');
+  el.innerHTML=out.join('');
+
+  // timeline
+  var bal=0,h='<thead><tr><th>Ragnarök</th><th>Step</th><th>Wolf</th><th>Plan balance</th></tr></thead><tbody>';
+  CLAN.forEach(function(c){
+    var n=c.b-c.a+1, inc=c.inc*n, cost=c.jump?jumpCost(c.jump):0; bal+=inc-cost;
+    var state=r>c.b?'done':(r>=c.a?'next':'');
+    h+='<tr class="'+state+'"><td>'+(c.a===c.b?c.a:c.a+'–'+c.b)+'</td><td style="text-align:left;font-family:var(--f-body)">'+c.step+(state==='next'?' <span class="st ok">now</span>':'')+'</td>'+
+      '<td>'+(inc?'+'+fM(inc):'')+(cost?'<span class="neg">−'+fM(cost)+'</span>':'')+(!inc&&!cost?'—':'')+'</td><td>'+fM(Math.max(bal,0))+'</td></tr>';});
+  document.getElementById('clan-steps').innerHTML=h+'</tbody>';
+
+  // before each jump
+  var have={vp:0,forest:0,proj:S.proj,acc:S.acc,hero:S.hero};
+  var j='<thead><tr><th>Jump</th><th>Ragnarök</th><th>Shop buys</th><th>Wolf spent</th><th>Wolf to hold</th><th>Dragon spent</th><th>VP needed first</th><th>With Forest</th><th>You</th></tr></thead><tbody>';
+  ['G3','G4','G5','G6','G7','G8'].forEach(function(g){
+    var n=+g.slice(1), done=n<=S.grade, sh=SHOP[g];
+    var p=n===S.grade+1?{t:S.t,m:S.m,g:S.g,pct:S.pct}:{t:0,m:0,g:0,pct:0};
+    var need=vpNeeded(g,p).total, b=sh?S.jumps[g]:0;
+    var vp=Math.max(need-b*(sh?sh.ld:0),0), vpF=sh&&sh.fx?Math.max(need-b*(sh.ld+sh.fx),0):null;
+    var hold=sh?holdFrom(n):0, ok=S.wolf>=hold;
+    j+='<tr class="'+(done?'done':'')+'"><td><span class="gbadge" style="background:'+gcol(g)+'">'+g+'</span></td><td>'+JUMP_RAG[g]+'</td>'+
+      '<td>'+(sh?'<span class="step"><button type="button" data-j="'+g+'" data-d="-1" aria-label="Fewer shop buys for '+g+'">−</button><output>'+b+'</output><button type="button" data-j="'+g+'" data-d="1" aria-label="More shop buys for '+g+'">+</button></span>':'no shop')+'</td>'+
+      '<td>'+(sh?fM(jumpCost(g)):'—')+'</td><td>'+(sh?fM(hold):'—')+'</td><td>'+(sh?fD(b*sh.dc):'—')+'</td>'+
+      '<td>'+fB(vp)+'</td><td>'+(vpF===null?'—':fB(vpF))+'</td>'+
+      '<td>'+(done?'Done':(sh?(ok?'<span class="st ok">Wolf ok</span>':'<span class="st bad">−'+fM(hold-S.wolf)+'</span>'):''))+'</td></tr>';});
+  document.getElementById('jumps').innerHTML=j+'</tbody>';
+}
+document.getElementById('jumps').addEventListener('click',function(e){
+  var b=e.target.closest('button[data-j]');if(!b)return;var g=b.dataset.j;
+  S.jumps[g]=Math.min(Math.max(S.jumps[g]+(+b.dataset.d),0),6);touch();renderClan();});
+document.getElementById('clan-rag').addEventListener('input',function(){var v=parseInt(this.value,10);
+  S.clan.rag=isNaN(v)?1:Math.min(Math.max(v,1),16);touch();renderClan();});
+
 function renderPlan(){
+  renderClan();
   var P=S.plan, next=S.grade+1, sum=document.getElementById('plan-summary'), hist=document.getElementById('plan-history');
   // goal options: grades above the one you have
   var opts='';for(var n=Math.min(next,8);n<=8;n++)opts+='<option value="'+n+'">G'+n+'</option>';
@@ -516,11 +603,11 @@ document.getElementById('log-add').addEventListener('click',function(){
   if(!w&&!d){wEl.focus();return;}
   var P=S.plan, t=totals(P.target), L=Math.max(P.left,1);
   P.log.push({w:w,d:d,needW:Math.max(t.w-S.wolf,0)/L,needD:Math.max(t.d-S.dragon,0)/L});
-  S.wolf+=w;S.dragon+=d;P.left=Math.max(P.left-1,0);
+  S.wolf+=w;S.dragon+=d;P.left=Math.max(P.left-1,0);S.clan.rag=Math.min(S.clan.rag+1,16);
   wEl.value='';dEl.value='';touch();renderAll();});
 document.getElementById('log-undo').addEventListener('click',function(){
   var e=S.plan.log.pop();if(!e)return;
-  S.wolf=Math.max(S.wolf-e.w,0);S.dragon=Math.max(S.dragon-e.d,0);S.plan.left+=1;touch();renderAll();});
+  S.wolf=Math.max(S.wolf-e.w,0);S.dragon=Math.max(S.dragon-e.d,0);S.plan.left+=1;S.clan.rag=Math.max(S.clan.rag-1,1);touch();renderAll();});
 
 function renderInputs(){
   FIELDS.forEach(function(id){document.getElementById(id).value=S[id]||S[id]===0?S[id]:'';});
