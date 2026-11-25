@@ -192,7 +192,7 @@ details li{margin:3px 0}
           <div class="f"><div class="lrow"><label for="vp">Valor Points</label><div class="seg" id="vp-unit" data-f="vp" role="group" aria-label="Valor Points unit"><button type="button" data-u="M" title="Millions">M</button><button type="button" data-u="B" title="Billions">B</button></div></div><div class="in"><input id="vp" type="number" min="0" step="any" inputmode="decimal"></div></div>
           <div class="f"><label for="acc">Academy level</label><div class="in"><input id="acc" type="number" min="0" max="45" inputmode="numeric"></div></div>
           <div class="f"><label for="hero">Hero level</label><div class="in"><input id="hero" type="number" min="0" inputmode="numeric"></div></div>
-          <div class="f"><label for="proj">Projects</label><div class="in"><input id="proj" type="number" min="0" inputmode="numeric"></div></div>
+          <div class="f"><label for="proj">Blueprints</label><div class="in"><input id="proj" type="number" min="0" step="any" inputmode="decimal"><span>K</span></div></div>
           <div class="f"><label for="gold">Gold</label><div class="in"><input id="gold" type="number" min="0" inputmode="numeric"></div></div>
         </div>
 
@@ -231,7 +231,7 @@ details li{margin:3px 0}
             <li>VP = Valor Points. You can type them in millions (M) or billions (B).</li>
             <li>VP needed = research levels left (Training cost + March speed) + guards left × guard cost.</li>
             <li>Missing VP is covered with Ragnarök runs in the previous grade's shop. One run = all Wolf + Dragon packs (Forest packs are added when you have enough Forest coins for a full run).</li>
-            <li>Gold is what it costs to buy the missing projects (10 gold per project).</li>
+            <li>Gold is what it costs to buy the missing blueprints (10 gold per blueprint).</li>
             <li>Wood, iron and stone: the same amount of each is needed to raise the Academy to the required level.</li>
           </ul>
         </details>
@@ -343,6 +343,7 @@ function fM(v){ // v in millions
   if(v>=1000)return trim(v/1000,2)+'B';
   if(v>=1)return trim(v,2)+'M';
   return trim(v*1000,0)+'K';}
+function fK(v){return trim(v/1000,2)+'K';} // blueprints are counted in thousands
 function fN(v){return Math.round(v).toLocaleString('en-US');}
 function gcol(g){return 'var(--'+g.toLowerCase()+')';}
 
@@ -380,6 +381,7 @@ for(var n=1;n<=8;n++){var b=document.createElement('button');b.type='button';b.c
 
 FIELDS.forEach(function(id){document.getElementById(id).addEventListener('input',function(){var v=parseFloat(this.value),x=isNaN(v)?0:Math.max(v,0);
   if(SMALL[id]&&S[id+'Unit']===SMALL[id])x=x/1000; // stored in the larger unit (VP in B, Dragon in M)
+  if(id==='proj')x=Math.round(x*1000);             // blueprints are typed in K, stored as a count
   S[id]=x;touch();renderResults();});});
 [].forEach.call(document.querySelectorAll('.seg[data-f]'),function(seg){seg.addEventListener('click',function(e){
   var f=seg.dataset.f,b=e.target.closest('button[data-u]');if(!b||b.dataset.u===S[f+'Unit'])return;
@@ -446,7 +448,7 @@ function renderResults(){
   }
   if(r.q.hero>0){rows.push(row(null,'Hero level',r.q.hero,S.hero,stOk(r.heroOk,'Reached','Need '+(r.q.hero-S.hero)+' more')));add(r.heroOk);}
   if(r.q.proj>0){
-    rows.push(row(null,'Projects',fN(r.q.proj),fN(S.proj),stOk(r.projMiss===0,'Enough','Short '+fN(r.projMiss))));
+    rows.push(row(null,'Blueprints',fK(r.q.proj),fK(S.proj),stOk(r.projMiss===0,'Enough','Short '+fK(r.projMiss))));
     if(r.projMiss>0){rows.push(row(null,'&nbsp;&nbsp;Gold to buy them',fN(r.goldNeed),fN(S.gold),stOk(goldOk,'Enough','Short '+fN(r.goldNeed-S.gold))));add(goldOk);}
   }
 
@@ -468,7 +470,7 @@ function renderResults(){
 function renderRoad(){
   var el=document.getElementById('road');
   var have={vp:S.vp,wolf:S.wolf,dragon:S.dragon,forest:S.forest,proj:S.proj,acc:S.acc,hero:S.hero};
-  var h='<thead><tr><th>Grade</th><th>VP needed</th><th>Ragnarök</th><th>Wolf left</th><th>Dragon left</th><th>Academy</th><th>Hero</th><th>Projects short</th></tr></thead><tbody>';
+  var h='<thead><tr><th>Grade</th><th>VP needed</th><th>Ragnarök</th><th>Wolf left</th><th>Dragon left</th><th>Academy</th><th>Hero</th><th>Blueprints short</th></tr></thead><tbody>';
   var any=false;
   GRADES.forEach(function(g){
     var n=+g.slice(1); if(n<=S.grade)return; any=true;
@@ -482,7 +484,7 @@ function renderRoad(){
       '<td class="'+(dragonAfter<0?'neg':'')+'">'+(dragonAfter<0?'−'+fM(-dragonAfter):fM(dragonAfter))+'</td>'+
       '<td class="'+(have.acc>=r.q.acc?'pos':'')+'">'+r.q.acc+'</td>'+
       '<td class="'+(r.q.hero===0?'':have.hero>=r.q.hero?'pos':'')+'">'+(r.q.hero||'—')+'</td>'+
-      '<td class="'+(r.projMiss?'neg':'')+'">'+(r.q.proj?(r.projMiss?fN(r.projMiss):'<span class="pos">0</span>'):'—')+'</td></tr>';
+      '<td class="'+(r.projMiss?'neg':'')+'">'+(r.q.proj?(r.projMiss?fK(r.projMiss):'<span class="pos">0</span>'):'—')+'</td></tr>';
     // carry over to the next grade
     have.vp=Math.max(have.vp+r.rg.vp-r.need.total,0);
     have.wolf=Math.max(wolfAfter,0);have.dragon=Math.max(dragonAfter,0);have.forest=Math.max(have.forest-r.rg.forest,0);
@@ -633,6 +635,7 @@ document.getElementById('log-undo').addEventListener('click',function(){
 
 function renderInputs(){
   FIELDS.forEach(function(id){document.getElementById(id).value=S[id]||S[id]===0?S[id]:'';});
+  document.getElementById('proj').value=+(S.proj/1000).toFixed(3);
   Object.keys(SMALL).forEach(function(f){
     document.getElementById(f).value=S[f+'Unit']===SMALL[f]?+(S[f]*1000).toFixed(3):S[f];
     [].forEach.call(document.querySelectorAll('#'+f+'-unit button'),function(b){b.setAttribute('aria-pressed',b.dataset.u===S[f+'Unit']?'true':'false');});});
