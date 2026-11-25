@@ -63,8 +63,10 @@ header .sp{flex:1}
 .in input{border:0;outline:0;background:transparent;font:inherit;font-family:var(--f-num);font-weight:500;font-size:15px;padding:8px 10px;width:100%;min-width:0;color:var(--fg);font-variant-numeric:tabular-nums}
 .in span{padding:0 10px;color:var(--faint);font-size:12px;font-weight:600}
 
-.seg{display:flex;gap:2px;padding:3px;flex:none}
-.seg button{border:0;background:transparent;font:inherit;font-size:12px;font-weight:600;color:var(--faint);padding:4px 8px;border-radius:6px;cursor:pointer}
+.lrow{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:4px}
+.lrow label{margin-bottom:0}
+.seg{display:flex;gap:2px;flex:none;border:1px solid var(--line);border-radius:7px;padding:1px}
+.seg button{border:0;background:transparent;font:inherit;font-size:11px;font-weight:600;color:var(--faint);padding:1px 7px;border-radius:5px;cursor:pointer}
 .seg button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent-ink)}
 .seg button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .prog{display:flex;flex-direction:column;gap:12px}
@@ -151,7 +153,7 @@ details li{margin:3px 0}
 
         <div class="group-label">Progress</div>
         <div class="fields">
-          <div class="f"><label for="vp">Valor Points</label><div class="in"><input id="vp" type="number" min="0" step="any" inputmode="decimal"><div class="seg" id="vp-unit" role="group" aria-label="Valor Points unit"><button type="button" data-u="M" title="Millions">M</button><button type="button" data-u="B" title="Billions">B</button></div></div></div>
+          <div class="f"><div class="lrow"><label for="vp">Valor Points</label><div class="seg" id="vp-unit" data-f="vp" role="group" aria-label="Valor Points unit"><button type="button" data-u="M" title="Millions">M</button><button type="button" data-u="B" title="Billions">B</button></div></div><div class="in"><input id="vp" type="number" min="0" step="any" inputmode="decimal"></div></div>
           <div class="f"><label for="acc">Academy level</label><div class="in"><input id="acc" type="number" min="0" max="45" inputmode="numeric"></div></div>
           <div class="f"><label for="hero">Hero level</label><div class="in"><input id="hero" type="number" min="0" inputmode="numeric"></div></div>
           <div class="f"><label for="proj">Projects</label><div class="in"><input id="proj" type="number" min="0" inputmode="numeric"></div></div>
@@ -161,7 +163,7 @@ details li{margin:3px 0}
         <div class="group-label">Shop coins</div>
         <div class="fields three">
           <div class="f"><label for="wolf"><i class="dot" style="background:var(--wolf)"></i>Wolf</label><div class="in"><input id="wolf" type="number" min="0" step="any" inputmode="decimal"><span>M</span></div></div>
-          <div class="f"><label for="dragon"><i class="dot" style="background:var(--dragon)"></i>Dragon</label><div class="in"><input id="dragon" type="number" min="0" step="any" inputmode="decimal"><span>M</span></div></div>
+          <div class="f"><div class="lrow"><label for="dragon"><i class="dot" style="background:var(--dragon)"></i>Dragon</label><div class="seg" id="dragon-unit" data-f="dragon" role="group" aria-label="Dragon coins unit"><button type="button" data-u="K" title="Thousands">K</button><button type="button" data-u="M" title="Millions">M</button></div></div><div class="in"><input id="dragon" type="number" min="0" step="any" inputmode="decimal"></div></div>
           <div class="f"><label for="forest"><i class="dot" style="background:var(--forest)"></i>Forest</label><div class="in"><input id="forest" type="number" min="0" step="any" inputmode="decimal"><span>M</span></div></div>
         </div>
 
@@ -225,8 +227,9 @@ var SHOP={G5:{ld:4.66,fx:0,wc:30,dc:1.3,fc:0},
   G8:{ld:3474,fx:2214,wc:255,dc:2.6,fc:336.7}};
 
 // ---------- state ----------
-var EXAMPLE={vpUnit:'B',grade:4,vp:1.2,acc:22,hero:35,proj:18000,gold:100000,wolf:40,dragon:2,forest:0,wood:30,iron:25,stone:28,t:4,m:2,g:1,pct:0};
-var EMPTY={vpUnit:'B',grade:1,vp:0,acc:1,hero:1,proj:0,gold:0,wolf:0,dragon:0,forest:0,wood:0,iron:0,stone:0,t:0,m:0,g:0,pct:0};
+var SMALL={vp:'M',dragon:'K'}; // fields that can be typed in a unit 1000× smaller
+var EXAMPLE={vpUnit:'B',dragonUnit:'M',grade:4,vp:1.2,acc:22,hero:35,proj:18000,gold:100000,wolf:40,dragon:2,forest:0,wood:30,iron:25,stone:28,t:4,m:2,g:1,pct:0};
+var EMPTY={vpUnit:'B',dragonUnit:'M',grade:1,vp:0,acc:1,hero:1,proj:0,gold:0,wolf:0,dragon:0,forest:0,wood:0,iron:0,stone:0,t:0,m:0,g:0,pct:0};
 var FIELDS=['vp','acc','hero','proj','gold','wolf','dragon','forest','wood','iron','stone'];
 var S, isExample=false;
 function load(){try{var raw=localStorage.getItem('gp-state');if(raw){S=Object.assign({},EMPTY,JSON.parse(raw));return;}}catch(e){}
@@ -291,11 +294,11 @@ for(var n=1;n<=8;n++){var b=document.createElement('button');b.type='button';b.c
   b.addEventListener('click',function(){S.grade=+this.dataset.n;S.t=0;S.m=0;S.g=0;S.pct=0;touch();renderAll();});chipsEl.appendChild(b);}
 
 FIELDS.forEach(function(id){document.getElementById(id).addEventListener('input',function(){var v=parseFloat(this.value),x=isNaN(v)?0:Math.max(v,0);
-  if(id==='vp'&&S.vpUnit==='M')x=x/1000; // Valor Points are kept in billions
+  if(SMALL[id]&&S[id+'Unit']===SMALL[id])x=x/1000; // stored in the larger unit (VP in B, Dragon in M)
   S[id]=x;touch();renderResults();});});
-document.getElementById('vp-unit').addEventListener('click',function(e){
-  var b=e.target.closest('button[data-u]');if(!b||b.dataset.u===S.vpUnit)return;
-  S.vpUnit=b.dataset.u;touch();renderInputs();});
+[].forEach.call(document.querySelectorAll('.seg[data-f]'),function(seg){seg.addEventListener('click',function(e){
+  var f=seg.dataset.f,b=e.target.closest('button[data-u]');if(!b||b.dataset.u===S[f+'Unit'])return;
+  S[f+'Unit']=b.dataset.u;touch();renderInputs();});});
 
 function touch(){if(isExample){isExample=false;}save();updateFlag();}
 function updateFlag(){document.getElementById('example-flag').textContent=isExample?'Showing example numbers. Replace them with yours.':'Type what you have now. Results update as you type. Saved in this browser.';}
@@ -406,8 +409,9 @@ function renderRoad(){
 
 function renderInputs(){
   FIELDS.forEach(function(id){document.getElementById(id).value=S[id]||S[id]===0?S[id]:'';});
-  document.getElementById('vp').value=S.vpUnit==='M'?+(S.vp*1000).toFixed(3):S.vp;
-  [].forEach.call(document.querySelectorAll('#vp-unit button'),function(b){b.setAttribute('aria-pressed',b.dataset.u===S.vpUnit?'true':'false');});
+  Object.keys(SMALL).forEach(function(f){
+    document.getElementById(f).value=S[f+'Unit']===SMALL[f]?+(S[f]*1000).toFixed(3):S[f];
+    [].forEach.call(document.querySelectorAll('#'+f+'-unit button'),function(b){b.setAttribute('aria-pressed',b.dataset.u===S[f+'Unit']?'true':'false');});});
   [].forEach.call(chipsEl.children,function(c){c.setAttribute('aria-pressed',+c.dataset.n===S.grade?'true':'false');});
   updateFlag();
 }
