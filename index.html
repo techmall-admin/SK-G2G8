@@ -193,7 +193,7 @@ details li{margin:3px 0}
           <div class="f"><label for="acc">Academy level</label><div class="in"><input id="acc" type="number" min="0" max="45" inputmode="numeric"></div></div>
           <div class="f"><label for="hero">Hero level</label><div class="in"><input id="hero" type="number" min="0" inputmode="numeric"></div></div>
           <div class="f"><label for="proj">Blueprints</label><div class="in"><input id="proj" type="number" min="0" step="any" inputmode="decimal"><span>K</span></div></div>
-          <div class="f"><label for="gold">Gold</label><div class="in"><input id="gold" type="number" min="0" inputmode="numeric"></div></div>
+          <div class="f"><label for="gold">Gold</label><div class="in"><input id="gold" type="number" min="0" step="any" inputmode="decimal"><span>K</span></div></div>
         </div>
 
         <div class="group-label">Shop coins</div>
@@ -381,7 +381,7 @@ for(var n=1;n<=8;n++){var b=document.createElement('button');b.type='button';b.c
 
 FIELDS.forEach(function(id){document.getElementById(id).addEventListener('input',function(){var v=parseFloat(this.value),x=isNaN(v)?0:Math.max(v,0);
   if(UNITS[id])x=x*(UNITS[id][S[id+'Unit']]||1);
-  if(id==='proj')x=Math.round(x*1000);             // blueprints are typed in K, stored as a count
+  if(id==='proj'||id==='gold')x=Math.round(x*1000); // blueprints and gold are typed in K, stored as a count
   S[id]=x;touch();renderResults();});});
 [].forEach.call(document.querySelectorAll('.seg[data-f]'),function(seg){seg.addEventListener('click',function(e){
   var f=seg.dataset.f,b=e.target.closest('button[data-u]');if(!b||b.dataset.u===S[f+'Unit'])return;
@@ -449,7 +449,7 @@ function renderResults(){
   if(r.q.hero>0){rows.push(row(null,'Hero level',r.q.hero,S.hero,stOk(r.heroOk,'Reached','Need '+(r.q.hero-S.hero)+' more')));add(r.heroOk);}
   if(r.q.proj>0){
     rows.push(row(null,'Blueprints',fK(r.q.proj),fK(S.proj),stOk(r.projMiss===0,'Enough','Short '+fK(r.projMiss))));
-    if(r.projMiss>0){rows.push(row(null,'&nbsp;&nbsp;Gold to buy them',fN(r.goldNeed),fN(S.gold),stOk(goldOk,'Enough','Short '+fN(r.goldNeed-S.gold))));add(goldOk);}
+    if(r.projMiss>0){rows.push(row(null,'&nbsp;&nbsp;Gold to buy them',fK(r.goldNeed),fK(S.gold),stOk(goldOk,'Enough','Short '+fK(r.goldNeed-S.gold))));add(goldOk);}
   }
 
   var pct=r.need.total>0?Math.min(S.vp/r.need.total*100,100):100;
@@ -636,6 +636,7 @@ document.getElementById('log-undo').addEventListener('click',function(){
 function renderInputs(){
   FIELDS.forEach(function(id){document.getElementById(id).value=S[id]||S[id]===0?S[id]:'';});
   document.getElementById('proj').value=+(S.proj/1000).toFixed(3);
+  document.getElementById('gold').value=+(S.gold/1000).toFixed(3);
   Object.keys(UNITS).forEach(function(f){
     document.getElementById(f).value=+(S[f]/(UNITS[f][S[f+'Unit']]||1)).toPrecision(6);
     [].forEach.call(document.querySelectorAll('#'+f+'-unit button'),function(b){b.setAttribute('aria-pressed',b.dataset.u===S[f+'Unit']?'true':'false');});});
