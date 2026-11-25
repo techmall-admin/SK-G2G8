@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SK-G2G8</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap">
+<style>
+/* Layout: two columns on desktop. Left = what you have (inputs). Right = what you still need (results). Stacks on phones. Light only, by request. */
+:root{
+  color-scheme: light;
+  --bg:#f5f7fb; --card:#ffffff; --line:#e3e8f1; --line-soft:#eef1f7;
+  --fg:#1e293b; --muted:#64748b; --faint:#687890;
+  --accent:#4f46e5; --accent-soft:#eef0ff; --accent-ink:#3730a3;
+  --ok:#15803d; --ok-soft:#e8f7ee; --warn:#b45309; --warn-soft:#fff5e6; --bad:#c2410c; --bad-soft:#fdeee7;
+  --wolf:#2563eb; --dragon:#dc2626; --forest:#16a34a;
+  --g2:#64748b; --g3:#ea580c; --g4:#ca8a04; --g5:#dc2626; --g6:#9f1239; --g7:#7e22ce; --g8:#1d4ed8;
+  --f-body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-num:"Space Grotesk","Inter",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:14px;line-height:1.45}
+.wrap{max-width:1180px;margin:0 auto;padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.logo{width:40px;height:40px;border-radius:10px;background:var(--accent);display:grid;place-items:center;color:#fff;font-family:var(--f-num);font-weight:700;font-size:15px;flex:none}
+header h1{font-size:18px;margin:0;font-weight:700}
+header p{margin:0;color:var(--muted);font-size:12.5px}
+header .sp{flex:1}
+.btn{border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:9px;padding:8px 12px;font:inherit;font-weight:500;cursor:pointer}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;min-width:76px}
+.btn.primary:hover{background:var(--accent-ink);color:#fff}
+.btn.armed{border-color:var(--bad);color:var(--bad)}
+.save-status{color:var(--muted);font-size:12.5px}
+.save-status.ok{color:var(--ok)}
+.save-status.bad{color:var(--bad)}
+.btn:focus-visible,.chip:focus-visible,.step button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.grid{display:grid;grid-template-columns:minmax(0,420px) minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}
+.col{display:flex;flex-direction:column;gap:18px;min-width:0}
+.sticky{position:sticky;top:calc(env(safe-area-inset-top,0px) + 16px)}
+@media (max-width:900px){.sticky{position:static}}
+.card h2{font-size:15px;margin:0 0 2px;font-weight:700;display:flex;align-items:center;gap:8px}
+.card h2 .n{width:22px;height:22px;border-radius:50%;background:var(--accent-soft);color:var(--accent-ink);font-size:12px;display:grid;place-items:center;font-weight:700}
+.card .sub{color:var(--muted);font-size:12.5px;margin:0 0 14px}
+.group-label{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin:16px 0 8px}
+
+.chips{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:5px}
+.chip{border:1px solid var(--line);background:var(--card);border-radius:8px;padding:7px 0;font:inherit;font-weight:600;cursor:pointer;color:var(--muted)}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+
+.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.fields.three{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media (max-width:420px){.fields.three{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.f label{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted);margin-bottom:4px;font-weight:500}
+.dot{width:8px;height:8px;border-radius:50%;flex:none}
+.in{display:flex;align-items:center;border:1px solid var(--line);border-radius:9px;background:var(--card);overflow:hidden}
+.in:focus-within{border-color:var(--accent)}
+.in input{border:0;outline:0;background:transparent;font:inherit;font-family:var(--f-num);font-weight:500;font-size:15px;padding:8px 10px;width:100%;min-width:0;color:var(--fg);font-variant-numeric:tabular-nums}
+.in span{padding:0 10px;color:var(--faint);font-size:12px;font-weight:600}
+
+.seg{display:flex;gap:2px;padding:3px;flex:none}
+.seg button{border:0;background:transparent;font:inherit;font-size:12px;font-weight:600;color:var(--faint);padding:4px 8px;border-radius:6px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent-ink)}
+.seg button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.prog{display:flex;flex-direction:column;gap:12px}
+.prow{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.prow .lbl{font-weight:500}
+.prow .lbl small{display:block;color:var(--faint);font-weight:400;font-size:12px}
+.step{display:flex;align-items:center;border:1px solid var(--line);border-radius:9px;overflow:hidden;flex:none}
+.step button{width:34px;height:36px;border:0;background:var(--bg);font-size:17px;cursor:pointer;color:var(--fg)}
+.step button:hover{background:var(--accent-soft);color:var(--accent)}
+.step output{min-width:58px;text-align:center;font-family:var(--f-num);font-weight:600;font-variant-numeric:tabular-nums}
+.done-note{background:var(--ok-soft);color:var(--ok);border-radius:10px;padding:12px;font-weight:500}
+
+/* results */
+.res-head{display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.gbadge{font-family:var(--f-num);font-weight:700;font-size:13px;color:#fff;border-radius:8px;padding:4px 9px}
+.res-head h2{font-size:18px;margin:0}
+.res-head .sp{flex:1}
+.pill{border-radius:999px;padding:5px 11px;font-size:12.5px;font-weight:600;white-space:nowrap}
+.pill.ok{background:var(--ok-soft);color:var(--ok)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.bigs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+@media (max-width:520px){.bigs{grid-template-columns:minmax(0,1fr)}}
+.big{background:var(--bg);border-radius:12px;padding:12px 14px}
+.big .v{font-family:var(--f-num);font-size:26px;font-weight:700;line-height:1.1;font-variant-numeric:tabular-nums}
+.big .k{color:var(--muted);font-size:12.5px;margin-top:3px}
+.bar{height:8px;border-radius:99px;background:var(--line-soft);overflow:hidden;margin:14px 0 4px}
+.bar i{display:block;height:100%;border-radius:99px;background:var(--accent);transition:width .25s}
+.bar-cap{display:flex;justify-content:space-between;color:var(--muted);font-size:12px}
+
+.check{width:100%;border-collapse:collapse;margin-top:16px;font-variant-numeric:tabular-nums}
+.check th{text-align:left;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);padding:0 8px 8px}
+.check th.r,.check td.r{text-align:right}
+.check td{padding:10px 8px;border-top:1px solid var(--line-soft);vertical-align:middle}
+.check td:first-child{font-weight:500}
+.check td .lab{display:flex;align-items:center;gap:8px}
+.st{display:inline-block;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:600;white-space:nowrap}
+.st.ok{background:var(--ok-soft);color:var(--ok)}
+.st.bad{background:var(--bad-soft);color:var(--bad)}
+.num{font-family:var(--f-num);font-weight:500}
+.tbl-wrap{overflow-x:auto;margin:0 -4px}
+.note{color:var(--muted);font-size:12.5px;margin:12px 0 0}
+
+.road{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;min-width:640px}
+.road th{text-align:right;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--faint);padding:0 10px 8px;white-space:nowrap}
+.road th:first-child,.road td:first-child{text-align:left}
+.road td{text-align:right;padding:10px;border-top:1px solid var(--line-soft);font-family:var(--f-num);white-space:nowrap}
+.road td .gbadge{font-size:12px;padding:3px 7px}
+.road tr.next td{background:var(--accent-soft)}
+.neg{color:var(--bad)}
+.pos{color:var(--ok)}
+details{margin-top:4px}
+summary{cursor:pointer;color:var(--accent);font-weight:500;font-size:13px}
+details ul{color:var(--muted);font-size:12.5px;padding-left:18px;margin:8px 0 0}
+details li{margin:3px 0}
+@media (prefers-reduced-motion:reduce){.bar i{transition:none}}
+</style>
+<style>body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="logo">TB</div>
+    <div>
+      <h1>SK-G2G8</h1>
+      <p>Total Battle · what you still need for your next guard grade</p>
+    </div>
+    <div class="sp"></div>
+    <span class="save-status" id="save-status" aria-live="polite"></span>
+    <button class="btn" id="btn-example" type="button">Load example</button>
+    <button class="btn" id="btn-clear" type="button">Clear all</button>
+    <button class="btn primary" id="btn-save" type="button">Save</button>
+  </header>
+
+  <div class="grid">
+    <!-- LEFT: inputs -->
+    <div class="col">
+      <section class="card">
+        <h2><span class="n">1</span>Your account</h2>
+        <p class="sub" id="example-flag">Type what you have now. Results update as you type.</p>
+
+        <div class="group-label">Guard grade you have now</div>
+        <div class="chips" id="grade-chips" role="group" aria-label="Current guard grade"></div>
+
+        <div class="group-label">Progress</div>
+        <div class="fields">
+          <div class="f"><label for="vp">Valor Points</label><div class="in"><input id="vp" type="number" min="0" step="any" inputmode="decimal"><div class="seg" id="vp-unit" role="group" aria-label="Valor Points unit"><button type="button" data-u="M" title="Millions">M</button><button type="button" data-u="B" title="Billions">B</button></div></div></div>
+          <div class="f"><label for="acc">Academy level</label><div class="in"><input id="acc" type="number" min="0" max="45" inputmode="numeric"></div></div>
+          <div class="f"><label for="hero">Hero level</label><div class="in"><input id="hero" type="number" min="0" inputmode="numeric"></div></div>
+          <div class="f"><label for="proj">Projects</label><div class="in"><input id="proj" type="number" min="0" inputmode="numeric"></div></div>
+          <div class="f"><label for="gold">Gold</label><div class="in"><input id="gold" type="number" min="0" inputmode="numeric"></div></div>
+        </div>
+
+        <div class="group-label">Shop coins</div>
+        <div class="fields three">
+          <div class="f"><label for="wolf"><i class="dot" style="background:var(--wolf)"></i>Wolf</label><div class="in"><input id="wolf" type="number" min="0" step="any" inputmode="decimal"><span>M</span></div></div>
+          <div class="f"><label for="dragon"><i class="dot" style="background:var(--dragon)"></i>Dragon</label><div class="in"><input id="dragon" type="number" min="0" step="any" inputmode="decimal"><span>M</span></div></div>
+          <div class="f"><label for="forest"><i class="dot" style="background:var(--forest)"></i>Forest</label><div class="in"><input id="forest" type="number" min="0" step="any" inputmode="decimal"><span>M</span></div></div>
+        </div>
+
+        <div class="group-label">Building resources</div>
+        <div class="fields three">
+          <div class="f"><label for="wood">Wood</label><div class="in"><input id="wood" type="number" min="0" step="any" inputmode="decimal"><span>M</span></div></div>
+          <div class="f"><label for="iron">Iron</label><div class="in"><input id="iron" type="number" min="0" step="any" inputmode="decimal"><span>M</span></div></div>
+          <div class="f"><label for="stone">Stone</label><div class="in"><input id="stone" type="number" min="0" step="any" inputmode="decimal"><span>M</span></div></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2><span class="n">2</span><span id="prog-title">Research for your next grade</span></h2>
+        <p class="sub" id="prog-sub"></p>
+        <div class="prog" id="prog"></div>
+      </section>
+    </div>
+
+    <!-- RIGHT: results -->
+    <div class="col sticky">
+      <section class="card" id="result"></section>
+      <section class="card">
+        <h2>Road to G8</h2>
+        <p class="sub">Every grade left, in order. Coins and VP spent on one grade are taken away before the next. Grades after your next one assume no research done yet.</p>
+        <div class="tbl-wrap"><table class="road" id="road"></table></div>
+        <details>
+          <summary>How the numbers are worked out</summary>
+          <ul>
+            <li>VP = Valor Points. You can type them in millions (M) or billions (B).</li>
+            <li>VP needed = research levels left (Training cost + March speed) + guards left × guard cost.</li>
+            <li>Missing VP is covered with Ragnarök runs in the previous grade's shop. One run = all Wolf + Dragon packs (Forest packs are added when you have enough Forest coins for a full run).</li>
+            <li>Gold is what it costs to buy the missing projects (10 gold per project).</li>
+            <li>Wood, iron and stone: the same amount of each is needed to raise the Academy to the required level.</li>
+          </ul>
+        </details>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---------- game data (from the original TB planner) ----------
+var GRADES=['G2','G3','G4','G5','G6','G7','G8'];
+var RES={G5:[0.0096,0.019,0.029,0.048,0.087,0.17,0.29,0.43,0.67,0.96],
+  G6:[0.12,0.23,0.35,0.58,1,2.1,3.5,5.2,8.1,12],
+  G7:[1.7,3.5,5.2,8.6,16,31,52,78,120,170],
+  G8:[16.9,28,47,78,130,220,370,620,1000,1700]};          // VP (B) per level, same for Training and March
+var RES_FIXED={G2:0.0000146,G3:0.0256,G4:0.4};              // total research VP (B) for G2–G4
+var GV={G2:0,G3:0.0085,G4:0.08,G5:0.9,G6:9,G7:90,G8:900};    // VP (B) per guard
+var GN={G2:0,G3:3,G4:3,G5:4,G6:4,G7:4,G8:1};                 // guards per grade
+var REQ={G2:{acc:10,hero:0,proj:0},G3:{acc:15,hero:0,proj:0},G4:{acc:20,hero:0,proj:0},
+  G5:{acc:25,hero:40,proj:25000},G6:{acc:30,hero:100,proj:51000},G7:{acc:35,hero:140,proj:112000},G8:{acc:40,hero:200,proj:196000}};
+var RSS_CUM={1:700,2:5900,3:10500,4:22000,5:46000,6:105000,7:200000,8:370000,9:590000,10:960000,11:1600000,12:2450000,13:3400000,
+  14:4900000,15:6600000,16:9000000,17:11900000,18:15600000,19:21400000,20:28200000,21:35500000,22:44000000,23:52500000,24:62000000,
+  25:75000000,26:91000000,27:107000000,28:126000000,29:152000000,30:181000000,31:210000000,32:242000000,33:281000000,34:327000000,
+  35:375000000,36:419000000,37:467000000,38:523000000,39:522000000,40:654000000,41:729000000,42:600000000,43:668000000,44:746000000,45:1125000000};
+// Ragnarök shop per grade: VP per run (Wolf+Dragon), extra VP from Forest packs, coin cost per run (M)
+var SHOP={G5:{ld:4.66,fx:0,wc:30,dc:1.3,fc:0},
+  G6:{ld:50.1,fx:31.1,wc:75,dc:1.95,fc:77},
+  G7:{ld:571,fx:354.3,wc:95,dc:1.5,fc:126.5},
+  G8:{ld:3474,fx:2214,wc:255,dc:2.6,fc:336.7}};
+
+// ---------- state ----------
+var EXAMPLE={vpUnit:'B',grade:4,vp:1.2,acc:22,hero:35,proj:18000,gold:100000,wolf:40,dragon:2,forest:0,wood:30,iron:25,stone:28,t:4,m:2,g:1,pct:0};
+var EMPTY={vpUnit:'B',grade:1,vp:0,acc:1,hero:1,proj:0,gold:0,wolf:0,dragon:0,forest:0,wood:0,iron:0,stone:0,t:0,m:0,g:0,pct:0};
+var FIELDS=['vp','acc','hero','proj','gold','wolf','dragon','forest','wood','iron','stone'];
+var S, isExample=false;
+function load(){try{var raw=localStorage.getItem('gp-state');if(raw){S=Object.assign({},EMPTY,JSON.parse(raw));return;}}catch(e){}
+  S=Object.assign({},EXAMPLE);isExample=true;}
+// Saves to this browser. Called on every change (autosave) and by the Save button.
+function save(){
+  var t=new Date();
+  try{localStorage.setItem('gp-state',JSON.stringify(S));localStorage.setItem('gp-saved-at',t.toISOString());}
+  catch(e){setStatus('This browser blocks saving (private window?)','bad');return false;}
+  setStatus('Saved '+t.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}),'');return true;}
+function setStatus(text,cls){var el=document.getElementById('save-status');el.textContent=text;el.className='save-status'+(cls?' '+cls:'');}
+function showLastSaved(){try{var at=localStorage.getItem('gp-saved-at');if(at&&localStorage.getItem('gp-state')){var d=new Date(at);
+  setStatus('Saved '+d.toLocaleDateString([], {day:'numeric',month:'short'})+', '+d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}),'');}}catch(e){}}
+
+// ---------- formatting ----------
+function trim(x,d){return (+x.toFixed(d)).toString();}
+function fB(v){ // v in billions
+  if(v<=0)return '0';
+  if(v>=1000)return trim(v/1000,2)+'T';
+  if(v>=1)return trim(v,2)+'B';
+  if(v>=0.001)return trim(v*1000,1)+'M';
+  return trim(v*1e6,0)+'K';}
+function fM(v){ // v in millions
+  if(v<=0)return '0';
+  if(v>=1e6)return trim(v/1e6,2)+'T';
+  if(v>=1000)return trim(v/1000,2)+'B';
+  if(v>=1)return trim(v,2)+'M';
+  return trim(v*1000,0)+'K';}
+function fN(v){return Math.round(v).toLocaleString('en-US');}
+function gcol(g){return 'var(--'+g.toLowerCase()+')';}
+
+// ---------- maths ----------
+function sumFrom(arr,from){var s=0;for(var i=from;i<arr.length;i++)s+=arr[i];return s;}
+function rss(from,to){var a=RSS_CUM[Math.min(Math.max(from,1),45)]||0,b=RSS_CUM[Math.min(to,45)]||0;return Math.max(b-a,0)/1e6;}
+
+// VP research+guards still needed for grade g, with progress p {t,m,g,pct}
+function vpNeeded(g,p){
+  var research=RES[g]?sumFrom(RES[g],p.t)+sumFrom(RES[g],p.m):RES_FIXED[g]*(1-p.pct/100);
+  var guards=Math.max(GN[g]-p.g,0)*GV[g];
+  return {research:research,guards:guards,total:research+guards};}
+
+// Ragnarök runs to cover `miss` VP. Uses Forest packs only on runs you can fully pay with Forest coins.
+function ragnarok(g,miss,forest){
+  var sh=SHOP[g]; if(!sh||miss<=0)return {runs:0,vp:0,wolf:0,dragon:0,forest:0};
+  var withF=sh.fx>0?Math.floor(forest/sh.fc):0, full=sh.ld+sh.fx, runsF, runs;
+  if(withF*full>=miss){runsF=Math.ceil(miss/full);runs=runsF;}
+  else{runsF=withF;runs=withF+Math.ceil((miss-withF*full)/sh.ld);}
+  return {runs:runs,vp:runsF*full+(runs-runsF)*sh.ld,wolf:runs*sh.wc,dragon:runs*sh.dc,forest:runsF*sh.fc};}
+
+function planGrade(g,p,have){
+  var q=REQ[g], need=vpNeeded(g,p);
+  var miss=Math.max(need.total-have.vp,0);
+  var rg=ragnarok(g,miss,have.forest);
+  var projMiss=Math.max(q.proj-have.proj,0);
+  var r=rss(have.acc,q.acc);
+  return {g:g,need:need,miss:miss,rg:rg,shop:!!SHOP[g],q:q,projMiss:projMiss,goldNeed:projMiss*10,
+    rss:r,accOk:have.acc>=q.acc,heroOk:have.hero>=q.hero};}
+
+// ---------- rendering: inputs ----------
+var chipsEl=document.getElementById('grade-chips');
+for(var n=1;n<=8;n++){var b=document.createElement('button');b.type='button';b.className='chip';b.textContent='G'+n;b.dataset.n=n;
+  b.addEventListener('click',function(){S.grade=+this.dataset.n;S.t=0;S.m=0;S.g=0;S.pct=0;touch();renderAll();});chipsEl.appendChild(b);}
+
+FIELDS.forEach(function(id){document.getElementById(id).addEventListener('input',function(){var v=parseFloat(this.value),x=isNaN(v)?0:Math.max(v,0);
+  if(id==='vp'&&S.vpUnit==='M')x=x/1000; // Valor Points are kept in billions
+  S[id]=x;touch();renderResults();});});
+document.getElementById('vp-unit').addEventListener('click',function(e){
+  var b=e.target.closest('button[data-u]');if(!b||b.dataset.u===S.vpUnit)return;
+  S.vpUnit=b.dataset.u;touch();renderInputs();});
+
+function touch(){if(isExample){isExample=false;}save();updateFlag();}
+function updateFlag(){document.getElementById('example-flag').textContent=isExample?'Showing example numbers. Replace them with yours.':'Type what you have now. Results update as you type. Saved in this browser.';}
+
+function stepper(key,label,hint,max,fmt,step){
+  return '<div class="prow"><div class="lbl">'+label+(hint?'<small>'+hint+'</small>':'')+'</div>'+
+  '<div class="step"><button type="button" aria-label="Less '+label+'" data-k="'+key+'" data-d="-'+(step||1)+'" data-max="'+max+'">−</button>'+
+  '<output id="o-'+key+'">'+fmt(S[key])+'</output>'+
+  '<button type="button" aria-label="More '+label+'" data-k="'+key+'" data-d="'+(step||1)+'" data-max="'+max+'">+</button></div></div>';}
+
+function renderProgress(){
+  var el=document.getElementById('prog'), next=S.grade+1, g='G'+next;
+  if(next>8){document.getElementById('prog-title').textContent='Research';document.getElementById('prog-sub').textContent='';
+    el.innerHTML='<div class="done-note">You have G8. Every guard grade is unlocked.</div>';return;}
+  document.getElementById('prog-title').textContent='Research for '+g;
+  var parts=[];
+  if(RES[g]){
+    document.getElementById('prog-sub').textContent='Levels you have finished for '+g+'. Each has 10 levels.';
+    parts.push(stepper('t','Training cost','VP left: '+fB(sumFrom(RES[g],S.t)),10,function(v){return v+' / 10';}));
+    parts.push(stepper('m','March speed','VP left: '+fB(sumFrom(RES[g],S.m)),10,function(v){return v+' / 10';}));
+  }else{
+    document.getElementById('prog-sub').textContent='How much of the '+g+' research you have finished.';
+    parts.push(stepper('pct','Research done','VP left: '+fB(RES_FIXED[g]*(1-S.pct/100)),100,function(v){return v+'%';},10));
+  }
+  if(GN[g]>0)parts.push(stepper('g','Guards unlocked',fB(GV[g])+' VP each',GN[g],function(v){return v+' / '+GN[g];}));
+  el.innerHTML=parts.join('');
+}
+document.getElementById('prog').addEventListener('click',function(e){
+  var b=e.target.closest('button[data-k]');if(!b)return;
+  var k=b.dataset.k;S[k]=Math.min(Math.max((S[k]||0)+(+b.dataset.d),0),+b.dataset.max);
+  touch();renderProgress();renderResults();});
+
+// ---------- rendering: results ----------
+function stOk(ok,okText,badText){return '<span class="st '+(ok?'ok':'bad')+'">'+(ok?okText:badText)+'</span>';}
+function row(dot,label,need,have,status){
+  return '<tr><td><span class="lab">'+(dot?'<i class="dot" style="background:'+dot+'"></i>':'')+label+'</span></td><td class="r num">'+need+'</td><td class="r num">'+have+'</td><td class="r">'+status+'</td></tr>';}
+
+function renderResults(){
+  var resEl=document.getElementById('result'), next=S.grade+1;
+  if(next>8){resEl.innerHTML='<div class="res-head"><span class="gbadge" style="background:var(--g8)">G8</span><h2>All grades unlocked</h2></div><p class="note">Nothing left to plan.</p>';renderRoad();return;}
+  var g='G'+next, have={vp:S.vp,forest:S.forest,proj:S.proj,acc:S.acc,hero:S.hero};
+  var r=planGrade(g,{t:S.t,m:S.m,g:S.g,pct:S.pct},have);
+  var wolfOk=S.wolf>=r.rg.wolf, dragonOk=S.dragon>=r.rg.dragon, forestOk=S.forest>=r.rg.forest;
+  var goldOk=S.gold>=r.goldNeed;
+  var vpOk=r.miss===0||r.shop;  // without a shop you must earn the VP by fighting
+  var rows=[], issues=0;
+  function add(ok){if(!ok)issues++;}
+
+  rows.push(row(null,'VP for research + guards',fB(r.need.total),fB(S.vp),
+    r.miss===0?stOk(true,'Enough'):(r.shop?stOk(true,'+'+r.rg.runs+' Ragnarök'):stOk(false,'','Short '+fB(r.miss)))));add(vpOk);
+  if(r.rg.runs>0){
+    rows.push(row('var(--wolf)','Wolf coins',fM(r.rg.wolf),fM(S.wolf),stOk(wolfOk,'Enough','Short '+fM(r.rg.wolf-S.wolf))));add(wolfOk);
+    rows.push(row('var(--dragon)','Dragon coins',fM(r.rg.dragon),fM(S.dragon),stOk(dragonOk,'Enough','Short '+fM(r.rg.dragon-S.dragon))));add(dragonOk);
+    if(r.rg.forest>0)rows.push(row('var(--forest)','Forest coins',fM(r.rg.forest),fM(S.forest),stOk(forestOk,'Enough','Short')));
+  }
+  rows.push(row(null,'Academy level',r.q.acc,S.acc,stOk(r.accOk,'Reached','Need '+(r.q.acc-S.acc)+' more')));add(r.accOk);
+  if(!r.accOk){
+    [['Wood','wood'],['Iron','iron'],['Stone','stone']].forEach(function(x){var ok=S[x[1]]>=r.rss;add(ok);
+      rows.push(row(null,'&nbsp;&nbsp;'+x[0]+' for Academy',fM(r.rss),fM(S[x[1]]),stOk(ok,'Enough','Short '+fM(r.rss-S[x[1]]))));});
+  }
+  if(r.q.hero>0){rows.push(row(null,'Hero level',r.q.hero,S.hero,stOk(r.heroOk,'Reached','Need '+(r.q.hero-S.hero)+' more')));add(r.heroOk);}
+  if(r.q.proj>0){
+    rows.push(row(null,'Projects',fN(r.q.proj),fN(S.proj),stOk(r.projMiss===0,'Enough','Short '+fN(r.projMiss))));
+    if(r.projMiss>0){rows.push(row(null,'&nbsp;&nbsp;Gold to buy them',fN(r.goldNeed),fN(S.gold),stOk(goldOk,'Enough','Short '+fN(r.goldNeed-S.gold))));add(goldOk);}
+  }
+
+  var pct=r.need.total>0?Math.min(S.vp/r.need.total*100,100):100;
+  var h='<div class="res-head"><span class="gbadge" style="background:'+gcol(g)+'">'+g+'</span><div><h2>Your next grade</h2>'+
+    '<div class="note" style="margin:2px 0 0">Unlock with research and guards from G'+S.grade+'</div></div><div class="sp"></div>'+
+    '<span class="pill '+(issues?'warn':'ok')+'">'+(issues?issues+' thing'+(issues>1?'s':'')+' missing':'Ready to unlock')+'</span></div>';
+  h+='<div class="bigs">'+
+    '<div class="big"><div class="v">'+fB(r.need.total)+'</div><div class="k">VP still needed</div></div>'+
+    '<div class="big"><div class="v" style="color:'+(r.miss?'var(--bad)':'var(--ok)')+'">'+(r.miss?fB(r.miss):'0')+'</div><div class="k">VP you are short</div></div>'+
+    '<div class="big"><div class="v">'+(r.shop?r.rg.runs+'×':'—')+'</div><div class="k">'+(r.shop?'Ragnarök runs (G'+S.grade+' shop)':'No Ragnarök shop, earn VP in battle')+'</div></div></div>';
+  h+='<div class="bar"><i style="width:'+pct.toFixed(1)+'%"></i></div><div class="bar-cap"><span>VP you have: '+fB(S.vp)+'</span><span>'+Math.floor(pct)+'%</span></div>';
+  h+='<div class="tbl-wrap"><table class="check"><thead><tr><th>Requirement</th><th class="r">Need</th><th class="r">You have</th><th class="r">Status</th></tr></thead><tbody>'+rows.join('')+'</tbody></table></div>';
+  if(r.rg.runs>0)h+='<p class="note">Research '+fB(r.need.research)+' + guards '+fB(r.need.guards)+'. Ragnarök adds '+fB(r.rg.vp)+' VP.</p>';
+  resEl.innerHTML=h;
+  renderRoad();
+}
+
+function renderRoad(){
+  var el=document.getElementById('road');
+  var have={vp:S.vp,wolf:S.wolf,dragon:S.dragon,forest:S.forest,proj:S.proj,acc:S.acc,hero:S.hero};
+  var h='<thead><tr><th>Grade</th><th>VP needed</th><th>Ragnarök</th><th>Wolf left</th><th>Dragon left</th><th>Academy</th><th>Hero</th><th>Projects short</th></tr></thead><tbody>';
+  var any=false;
+  GRADES.forEach(function(g){
+    var n=+g.slice(1); if(n<=S.grade)return; any=true;
+    var p=n===S.grade+1?{t:S.t,m:S.m,g:S.g,pct:S.pct}:{t:0,m:0,g:0,pct:0};
+    var r=planGrade(g,p,have);
+    var wolfAfter=have.wolf-r.rg.wolf, dragonAfter=have.dragon-r.rg.dragon;
+    h+='<tr'+(n===S.grade+1?' class="next"':'')+'><td><span class="gbadge" style="background:'+gcol(g)+'">'+g+'</span></td>'+
+      '<td>'+fB(r.need.total)+'</td>'+
+      '<td>'+(r.shop?(r.rg.runs?r.rg.runs+'×':'0'):(r.miss?'<span class="neg">short '+fB(r.miss)+'</span>':'—'))+'</td>'+
+      '<td class="'+(wolfAfter<0?'neg':'')+'">'+(wolfAfter<0?'−'+fM(-wolfAfter):fM(wolfAfter))+'</td>'+
+      '<td class="'+(dragonAfter<0?'neg':'')+'">'+(dragonAfter<0?'−'+fM(-dragonAfter):fM(dragonAfter))+'</td>'+
+      '<td class="'+(have.acc>=r.q.acc?'pos':'')+'">'+r.q.acc+'</td>'+
+      '<td class="'+(r.q.hero===0?'':have.hero>=r.q.hero?'pos':'')+'">'+(r.q.hero||'—')+'</td>'+
+      '<td class="'+(r.projMiss?'neg':'')+'">'+(r.q.proj?(r.projMiss?fN(r.projMiss):'<span class="pos">0</span>'):'—')+'</td></tr>';
+    // carry over to the next grade
+    have.vp=Math.max(have.vp+r.rg.vp-r.need.total,0);
+    have.wolf=Math.max(wolfAfter,0);have.dragon=Math.max(dragonAfter,0);have.forest=Math.max(have.forest-r.rg.forest,0);
+    have.proj=Math.max(have.proj-r.q.proj,0);have.acc=Math.max(have.acc,r.q.acc);
+  });
+  if(!any)h+='<tr><td colspan="8" style="text-align:left">All grades unlocked.</td></tr>';
+  el.innerHTML=h+'</tbody>';
+}
+
+function renderInputs(){
+  FIELDS.forEach(function(id){document.getElementById(id).value=S[id]||S[id]===0?S[id]:'';});
+  document.getElementById('vp').value=S.vpUnit==='M'?+(S.vp*1000).toFixed(3):S.vp;
+  [].forEach.call(document.querySelectorAll('#vp-unit button'),function(b){b.setAttribute('aria-pressed',b.dataset.u===S.vpUnit?'true':'false');});
+  [].forEach.call(chipsEl.children,function(c){c.setAttribute('aria-pressed',+c.dataset.n===S.grade?'true':'false');});
+  updateFlag();
+}
+function renderAll(){renderInputs();renderProgress();renderResults();}
+
+// Buttons that wipe your numbers ask for a second click first.
+function confirmClick(btn,action){
+  if(btn.dataset.armed){clearTimeout(+btn.dataset.timer);reset();action();return;}
+  btn.dataset.armed='1';btn.dataset.label=btn.textContent;btn.textContent='Click again to confirm';btn.classList.add('armed');
+  btn.dataset.timer=setTimeout(reset,3500);
+  function reset(){if(!btn.dataset.armed)return;delete btn.dataset.armed;btn.textContent=btn.dataset.label;btn.classList.remove('armed');}}
+document.getElementById('btn-example').addEventListener('click',function(){confirmClick(this,function(){
+  S=Object.assign({},EXAMPLE);isExample=true;try{localStorage.removeItem('gp-state');localStorage.removeItem('gp-saved-at');}catch(e){}
+  setStatus('Not saved','');renderAll();});});
+document.getElementById('btn-clear').addEventListener('click',function(){confirmClick(this,function(){
+  S=Object.assign({},EMPTY);isExample=false;save();renderAll();});});
+document.getElementById('btn-save').addEventListener('click',function(){
+  var btn=this;isExample=false;if(save()){updateFlag();btn.textContent='Saved ✓';setTimeout(function(){btn.textContent='Save';},1500);}});
+
+load();renderAll();showLastSaved();
+</script>
+</body>
+</html>
