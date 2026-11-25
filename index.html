@@ -117,6 +117,21 @@ header .sp{flex:1}
 .road tr.next td{background:var(--accent-soft)}
 .neg{color:var(--bad)}
 .pos{color:var(--ok)}
+.plan{margin-top:18px}
+.plan-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:18px;align-items:start;margin-bottom:16px}
+@media (max-width:900px){.plan-grid{grid-template-columns:minmax(0,1fr)}}
+.in select{border:0;outline:0;background:transparent;font:inherit;font-weight:500;padding:8px 10px;width:100%;color:var(--fg)}
+.logbox{background:var(--bg);border-radius:12px;padding:14px}
+.logbox .in{background:var(--card)}
+.row-btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.bigs.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+.big .s{color:var(--muted);font-size:12px;margin-top:6px;font-family:var(--f-body)}
+.alert{border-radius:10px;padding:10px 12px;font-size:13px;font-weight:500}
+.alert.ok{background:var(--ok-soft);color:var(--ok)}
+.alert.bad{background:var(--bad-soft);color:var(--bad)}
+.alert.info{background:var(--accent-soft);color:var(--accent-ink)}
+.mini{display:inline-block;width:70px;height:6px;border-radius:9px;background:var(--line-soft);vertical-align:middle;margin-left:8px;overflow:hidden}
+.mini i{display:block;height:100%;border-radius:9px}
 details{margin-top:4px}
 summary{cursor:pointer;color:var(--accent);font-weight:500;font-size:13px}
 details ul{color:var(--muted);font-size:12.5px;padding-left:18px;margin:8px 0 0}
@@ -202,6 +217,30 @@ details li{margin:3px 0}
       </section>
     </div>
   </div>
+
+  <section class="card plan" id="plan-card">
+    <h2><span class="n">3</span>Ragnarök plan</h2>
+    <p class="sub">Ragnarök events are limited. After each one, log the coins you collected. If you collect less than planned, the next events must bring more, and the page shows how much.</p>
+    <div class="plan-grid">
+      <div class="col">
+        <div class="fields">
+          <div class="f"><label for="plan-target">Goal grade</label><div class="in"><select id="plan-target"></select></div></div>
+          <div class="f"><label for="plan-left">Ragnarök events left</label><div class="in"><input id="plan-left" type="number" min="0" max="99" inputmode="numeric"></div></div>
+        </div>
+        <div class="logbox">
+          <div class="group-label" id="log-title" style="margin-top:0">Log Ragnarök #1</div>
+          <div class="fields">
+            <div class="f"><label for="log-w"><i class="dot" style="background:var(--wolf)"></i>Wolf collected</label><div class="in"><input id="log-w" type="number" min="0" step="any" inputmode="decimal" placeholder="0"><span>M</span></div></div>
+            <div class="f"><label for="log-d"><i class="dot" style="background:var(--dragon)"></i>Dragon collected</label><div class="in"><input id="log-d" type="number" min="0" step="any" inputmode="decimal" placeholder="0"><span id="log-d-unit">M</span></div></div>
+          </div>
+          <div class="row-btns"><button class="btn primary" id="log-add" type="button">Add to my coins</button><button class="btn" id="log-undo" type="button">Undo last</button></div>
+          <p class="note" style="margin-top:8px">Adding moves one event from “left” to “done” and adds the coins to your balance above.</p>
+        </div>
+      </div>
+      <div id="plan-summary" class="col"></div>
+    </div>
+    <div class="tbl-wrap"><table class="road" id="plan-history"></table></div>
+  </section>
 </div>
 
 <script>
@@ -228,12 +267,13 @@ var SHOP={G5:{ld:4.66,fx:0,wc:30,dc:1.3,fc:0},
 
 // ---------- state ----------
 var SMALL={vp:'M',dragon:'K'}; // fields that can be typed in a unit 1000× smaller
-var EXAMPLE={vpUnit:'B',dragonUnit:'M',grade:4,vp:1.2,acc:22,hero:35,proj:18000,gold:100000,wolf:40,dragon:2,forest:0,wood:30,iron:25,stone:28,t:4,m:2,g:1,pct:0};
-var EMPTY={vpUnit:'B',dragonUnit:'M',grade:1,vp:0,acc:1,hero:1,proj:0,gold:0,wolf:0,dragon:0,forest:0,wood:0,iron:0,stone:0,t:0,m:0,g:0,pct:0};
+function clone(o){return JSON.parse(JSON.stringify(o));}
+var EXAMPLE={plan:{target:8,left:12,log:[{w:150,d:1.1,needW:118,needD:0.9},{w:90,d:0.6,needW:118,needD:0.9}]},vpUnit:'B',dragonUnit:'M',grade:4,vp:1.2,acc:22,hero:35,proj:18000,gold:100000,wolf:40,dragon:2,forest:0,wood:30,iron:25,stone:28,t:4,m:2,g:1,pct:0};
+var EMPTY={plan:{target:8,left:10,log:[]},vpUnit:'B',dragonUnit:'M',grade:1,vp:0,acc:1,hero:1,proj:0,gold:0,wolf:0,dragon:0,forest:0,wood:0,iron:0,stone:0,t:0,m:0,g:0,pct:0};
 var FIELDS=['vp','acc','hero','proj','gold','wolf','dragon','forest','wood','iron','stone'];
 var S, isExample=false;
-function load(){try{var raw=localStorage.getItem('gp-state');if(raw){S=Object.assign({},EMPTY,JSON.parse(raw));return;}}catch(e){}
-  S=Object.assign({},EXAMPLE);isExample=true;}
+function load(){try{var raw=localStorage.getItem('gp-state');if(raw){S=Object.assign(clone(EMPTY),JSON.parse(raw));return;}}catch(e){}
+  S=clone(EXAMPLE);isExample=true;}
 // Saves to this browser. Called on every change (autosave) and by the Save button.
 function save(){
   var t=new Date();
@@ -298,7 +338,7 @@ FIELDS.forEach(function(id){document.getElementById(id).addEventListener('input'
   S[id]=x;touch();renderResults();});});
 [].forEach.call(document.querySelectorAll('.seg[data-f]'),function(seg){seg.addEventListener('click',function(e){
   var f=seg.dataset.f,b=e.target.closest('button[data-u]');if(!b||b.dataset.u===S[f+'Unit'])return;
-  S[f+'Unit']=b.dataset.u;touch();renderInputs();});});
+  S[f+'Unit']=b.dataset.u;touch();renderInputs();renderPlan();});});
 
 function touch(){if(isExample){isExample=false;}save();updateFlag();}
 function updateFlag(){document.getElementById('example-flag').textContent=isExample?'Showing example numbers. Replace them with yours.':'Type what you have now. Results update as you type. Saved in this browser.';}
@@ -338,7 +378,7 @@ function row(dot,label,need,have,status){
 
 function renderResults(){
   var resEl=document.getElementById('result'), next=S.grade+1;
-  if(next>8){resEl.innerHTML='<div class="res-head"><span class="gbadge" style="background:var(--g8)">G8</span><h2>All grades unlocked</h2></div><p class="note">Nothing left to plan.</p>';renderRoad();return;}
+  if(next>8){resEl.innerHTML='<div class="res-head"><span class="gbadge" style="background:var(--g8)">G8</span><h2>All grades unlocked</h2></div><p class="note">Nothing left to plan.</p>';renderRoad();renderPlan();return;}
   var g='G'+next, have={vp:S.vp,forest:S.forest,proj:S.proj,acc:S.acc,hero:S.hero};
   var r=planGrade(g,{t:S.t,m:S.m,g:S.g,pct:S.pct},have);
   var wolfOk=S.wolf>=r.rg.wolf, dragonOk=S.dragon>=r.rg.dragon, forestOk=S.forest>=r.rg.forest;
@@ -377,7 +417,7 @@ function renderResults(){
   h+='<div class="tbl-wrap"><table class="check"><thead><tr><th>Requirement</th><th class="r">Need</th><th class="r">You have</th><th class="r">Status</th></tr></thead><tbody>'+rows.join('')+'</tbody></table></div>';
   if(r.rg.runs>0)h+='<p class="note">Research '+fB(r.need.research)+' + guards '+fB(r.need.guards)+'. Ragnarök adds '+fB(r.rg.vp)+' VP.</p>';
   resEl.innerHTML=h;
-  renderRoad();
+  renderRoad();renderPlan();
 }
 
 function renderRoad(){
@@ -407,6 +447,76 @@ function renderRoad(){
   el.innerHTML=h+'</tbody>';
 }
 
+// ---------- Ragnarök plan ----------
+// Coins and shop buys needed from your current state up to `target` grade (same carry-over as the road table).
+function totals(target){
+  var have={vp:S.vp,forest:S.forest,proj:S.proj,acc:S.acc,hero:S.hero},w=0,d=0,runs=0;
+  for(var n=S.grade+1;n<=target;n++){var g='G'+n;
+    var p=n===S.grade+1?{t:S.t,m:S.m,g:S.g,pct:S.pct}:{t:0,m:0,g:0,pct:0};
+    var r=planGrade(g,p,have);w+=r.rg.wolf;d+=r.rg.dragon;runs+=r.rg.runs;
+    have.vp=Math.max(have.vp+r.rg.vp-r.need.total,0);have.forest=Math.max(have.forest-r.rg.forest,0);
+    have.proj=Math.max(have.proj-r.q.proj,0);have.acc=Math.max(have.acc,r.q.acc);}
+  return {w:w,d:d,runs:runs};}
+function fD(v){return S.dragonUnit==='K'?fN(v*1000)+'K':fM(v);}
+var targetSel=document.getElementById('plan-target');
+
+function renderPlan(){
+  var P=S.plan, next=S.grade+1, sum=document.getElementById('plan-summary'), hist=document.getElementById('plan-history');
+  // goal options: grades above the one you have
+  var opts='';for(var n=Math.min(next,8);n<=8;n++)opts+='<option value="'+n+'">G'+n+'</option>';
+  if(targetSel.innerHTML!==opts)targetSel.innerHTML=opts;
+  P.target=Math.min(Math.max(P.target,next),8);targetSel.value=P.target;targetSel.disabled=next>8;
+  var leftEl=document.getElementById('plan-left');if(document.activeElement!==leftEl)leftEl.value=P.left;
+  document.getElementById('log-title').textContent='Log Ragnarök #'+(P.log.length+1);
+  document.getElementById('log-d-unit').textContent=S.dragonUnit;
+  document.getElementById('log-undo').disabled=!P.log.length;
+
+  if(next>8){sum.innerHTML='<div class="alert ok">You have G8. Nothing left to save for.</div>';}
+  else{
+    var t=totals(P.target), needW=Math.max(t.w-S.wolf,0), needD=Math.max(t.d-S.dragon,0), L=P.left;
+    var perW=L>0?needW/L:needW, perD=L>0?needD/L:needD;
+    var h='<div class="bigs two">'+
+      '<div class="big"><div class="v">'+(needW?fM(perW):'0')+'</div><div class="k">Wolf needed per event from now</div><div class="s">'+fM(needW)+' still to collect over '+L+' event'+(L===1?'':'s')+'</div></div>'+
+      '<div class="big"><div class="v">'+(needD?fD(perD):'0')+'</div><div class="k">Dragon needed per event from now</div><div class="s">'+fD(needD)+' still to collect</div></div></div>';
+    var alerts=[];
+    if(!needW&&!needD)alerts.push('<div class="alert ok">You already have the coins for G'+P.target+'. Total cost: '+fM(t.w)+' Wolf, '+fD(t.d)+' Dragon.</div>');
+    else if(L<=0)alerts.push('<div class="alert bad">No events left. You are short '+fM(needW)+' Wolf and '+fD(needD)+' Dragon.</div>');
+    else if(P.log.length){
+      var avgW=P.log.reduce(function(a,e){return a+e.w;},0)/P.log.length, first=P.log[0].needW;
+      if(avgW>=perW)alerts.push('<div class="alert ok">On track. You average '+fM(avgW)+' Wolf per event and need '+fM(perW)+'.</div>');
+      else{var evs=avgW>0?Math.ceil(needW/avgW):Infinity;
+        alerts.push('<div class="alert bad">Behind. You average '+fM(avgW)+' Wolf per event but now need '+fM(perW)+' (+'+fM(perW-avgW)+'). '+
+          (isFinite(evs)?'At your average you need '+evs+' events, '+(evs-L)+' more than you have.':'')+'</div>');}
+      if(Math.abs(perW-first)>0.005)alerts.push('<div class="alert info">The target per event moved from '+fM(first)+' (Ragnarök #1) to '+fM(perW)+' now.</div>');
+    }else alerts.push('<div class="alert info">Collect at least '+fM(perW)+' Wolf and '+fD(perD)+' Dragon in each of the next '+L+' events.</div>');
+    if(t.runs>L)alerts.push('<div class="alert bad">You need '+t.runs+' shop buys to reach G'+P.target+' but have '+L+' events. Earn more VP in battle to need fewer buys.</div>');
+    else if(t.runs)alerts.push('<div class="alert ok" style="font-weight:400">Shop buys needed: '+t.runs+' of your '+L+' events.</div>');
+    sum.innerHTML=h+alerts.join('');
+  }
+
+  if(!P.log.length){hist.innerHTML='<tbody><tr><td style="text-align:left;font-family:var(--f-body);color:var(--muted)">No events logged yet. After your next Ragnarök, type the coins you got and press “Add to my coins”.</td></tr></tbody>';return;}
+  var rows='<thead><tr><th>Event</th><th>Wolf collected</th><th>Needed then</th><th>Difference</th><th>Dragon collected</th><th>Needed then</th></tr></thead><tbody>';
+  P.log.forEach(function(e,i){var diff=e.w-e.needW, ok=diff>=-0.005, pctW=e.needW>0?Math.min(e.w/e.needW*100,100):100;
+    rows+='<tr><td>Ragnarök #'+(i+1)+'</td><td>'+fM(e.w)+'<span class="mini"><i style="width:'+pctW.toFixed(0)+'%;background:'+(ok?'var(--ok)':'var(--bad)')+'"></i></span></td>'+
+      '<td>'+fM(e.needW)+'</td><td class="'+(ok?'pos':'neg')+'">'+(ok?'+'+fM(diff):'−'+fM(-diff))+'</td>'+
+      '<td class="'+(e.d>=e.needD-0.0005?'':'neg')+'">'+fD(e.d)+'</td><td>'+fD(e.needD)+'</td></tr>';});
+  hist.innerHTML=rows+'</tbody>';
+}
+targetSel.addEventListener('change',function(){S.plan.target=+this.value;touch();renderPlan();});
+document.getElementById('plan-left').addEventListener('input',function(){var v=parseInt(this.value,10);S.plan.left=isNaN(v)?0:Math.min(Math.max(v,0),99);touch();renderPlan();});
+document.getElementById('log-add').addEventListener('click',function(){
+  var wEl=document.getElementById('log-w'),dEl=document.getElementById('log-d');
+  var w=Math.max(parseFloat(wEl.value)||0,0), d=Math.max(parseFloat(dEl.value)||0,0);
+  if(S.dragonUnit==='K')d=d/1000;
+  if(!w&&!d){wEl.focus();return;}
+  var P=S.plan, t=totals(P.target), L=Math.max(P.left,1);
+  P.log.push({w:w,d:d,needW:Math.max(t.w-S.wolf,0)/L,needD:Math.max(t.d-S.dragon,0)/L});
+  S.wolf+=w;S.dragon+=d;P.left=Math.max(P.left-1,0);
+  wEl.value='';dEl.value='';touch();renderAll();});
+document.getElementById('log-undo').addEventListener('click',function(){
+  var e=S.plan.log.pop();if(!e)return;
+  S.wolf=Math.max(S.wolf-e.w,0);S.dragon=Math.max(S.dragon-e.d,0);S.plan.left+=1;touch();renderAll();});
+
 function renderInputs(){
   FIELDS.forEach(function(id){document.getElementById(id).value=S[id]||S[id]===0?S[id]:'';});
   Object.keys(SMALL).forEach(function(f){
@@ -424,10 +534,10 @@ function confirmClick(btn,action){
   btn.dataset.timer=setTimeout(reset,3500);
   function reset(){if(!btn.dataset.armed)return;delete btn.dataset.armed;btn.textContent=btn.dataset.label;btn.classList.remove('armed');}}
 document.getElementById('btn-example').addEventListener('click',function(){confirmClick(this,function(){
-  S=Object.assign({},EXAMPLE);isExample=true;try{localStorage.removeItem('gp-state');localStorage.removeItem('gp-saved-at');}catch(e){}
+  S=clone(EXAMPLE);isExample=true;try{localStorage.removeItem('gp-state');localStorage.removeItem('gp-saved-at');}catch(e){}
   setStatus('Not saved','');renderAll();});});
 document.getElementById('btn-clear').addEventListener('click',function(){confirmClick(this,function(){
-  S=Object.assign({},EMPTY);isExample=false;save();renderAll();});});
+  S=clone(EMPTY);isExample=false;save();renderAll();});});
 document.getElementById('btn-save').addEventListener('click',function(){
   var btn=this;isExample=false;if(save()){updateFlag();btn.textContent='Saved ✓';setTimeout(function(){btn.textContent='Save';},1500);}});
 
