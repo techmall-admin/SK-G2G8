@@ -397,7 +397,11 @@ function planGrade(g,p,have){
 // ---------- rendering: inputs ----------
 var chipsEl=document.getElementById('grade-chips');
 for(var n=1;n<=8;n++){var b=document.createElement('button');b.type='button';b.className='chip';b.textContent='G'+n;b.dataset.n=n;
-  b.addEventListener('click',function(){S.grade=+this.dataset.n;S.t=0;S.m=0;S.g=0;S.pct=0;touch();renderAll();});chipsEl.appendChild(b);}
+  b.addEventListener('click',function(){
+    // each grade keeps its own research progress, so switching grades and back restores it
+    S.res=S.res||{};S.res['G'+(S.grade+1)]={t:S.t,m:S.m,g:S.g,pct:S.pct};
+    S.grade=+this.dataset.n;var p=S.res['G'+(S.grade+1)]||{t:0,m:0,g:0,pct:0};
+    S.t=p.t;S.m=p.m;S.g=p.g;S.pct=p.pct;touch();renderAll();});chipsEl.appendChild(b);}
 
 FIELDS.forEach(function(id){document.getElementById(id).addEventListener('input',function(){var v=parseFloat(this.value),x=isNaN(v)?0:Math.max(v,0);
   if(UNITS[id])x=x*(UNITS[id][S[id+'Unit']]||1);
@@ -439,6 +443,7 @@ function renderProgress(){
 document.getElementById('prog').addEventListener('click',function(e){
   var b=e.target.closest('button[data-k]');if(!b)return;
   var k=b.dataset.k;S[k]=Math.min(Math.max((S[k]||0)+(+b.dataset.d),0),+b.dataset.max);
+  S.res=S.res||{};S.res['G'+(S.grade+1)]={t:S.t,m:S.m,g:S.g,pct:S.pct};
   touch();renderProgress();renderResults();});
 
 // ---------- rendering: results ----------
