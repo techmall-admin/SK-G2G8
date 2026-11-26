@@ -244,7 +244,7 @@ details li{margin:3px 0}
   <div class="view" id="view-ragnarok" role="tabpanel" aria-labelledby="tab-ragnarok" hidden>
   <section class="card plan" id="plan-card">
     <h2>Ragnarök plan</h2>
-    <p class="sub">Ragnarök events are limited. After each one, log the coins you collected. If you collect less than planned, the next events must bring more, and the page shows how much.</p>
+    <p class="sub">Ragnarök events are limited. Keep your Wolf and Dragon balance up to date. The table splits what you still need over the events left, so a weak event makes the next ones ask for more.</p>
     <div class="plan-grid">
       <div class="col">
         <div class="fields">
@@ -256,13 +256,12 @@ details li{margin:3px 0}
         </div>
         <p class="note" style="margin:0" id="plan-dates">Ragnarök comes every 4 days. Set the next date to see when each one happens.</p>
         <div class="logbox">
-          <div class="group-label" id="log-title" style="margin-top:0">Log Ragnarök #1</div>
+          <div class="group-label" style="margin-top:0">Your balance now</div>
           <div class="fields">
-            <div class="f"><label for="log-w"><i class="dot" style="background:var(--wolf)"></i>Wolf collected</label><div class="in"><input id="log-w" type="number" min="0" step="any" inputmode="decimal" placeholder="0"><span>M</span></div></div>
-            <div class="f"><div class="lrow"><label for="log-d"><i class="dot" style="background:var(--dragon)"></i>Dragon collected</label><div class="seg" id="log-d-unit" role="group" aria-label="Dragon collected unit"><button type="button" data-u="K" title="Thousands">K</button><button type="button" data-u="M" title="Millions">M</button></div></div><div class="in"><input id="log-d" type="number" min="0" step="any" inputmode="decimal" placeholder="0"></div></div>
+            <div class="f"><label for="rb-wolf"><i class="dot" style="background:var(--wolf)"></i>Wolf</label><div class="in"><input id="rb-wolf" type="number" min="0" step="any" inputmode="decimal"><span>M</span></div></div>
+            <div class="f"><div class="lrow"><label for="rb-dragon"><i class="dot" style="background:var(--dragon)"></i>Dragon</label><div class="seg" data-f="dragon" role="group" aria-label="Dragon unit"><button type="button" data-u="K" title="Thousands">K</button><button type="button" data-u="M" title="Millions">M</button></div></div><div class="in"><input id="rb-dragon" type="number" min="0" step="any" inputmode="decimal"></div></div>
           </div>
-          <div class="row-btns"><button class="btn primary" id="log-add" type="button">Add to my coins</button><button class="btn" id="log-undo" type="button">Undo last</button></div>
-          <p class="note" style="margin-top:8px">Adding moves one event from “left” to “done” and adds the coins to your Wolf and Dragon balance in the Calculator tab.</p>
+          <p class="note" style="margin-top:8px">Type what you really have after spending. These are the same numbers as in the Calculator tab.</p>
         </div>
       </div>
       <div id="plan-summary" class="col"></div>
@@ -275,7 +274,7 @@ details li{margin:3px 0}
   <div class="view" id="view-clan" role="tabpanel" aria-labelledby="tab-clan" hidden>
   <section class="card plan" id="clan-card">
     <h2>Clan plan: G2 → G3 → G5 → G8</h2>
-    <p class="sub">The HKL plan. Save Wolf coins at G2, then jump grades during Ragnarök. Set the Ragnarök you are on. Logging an event in the Ragnarök plan tab moves it forward.</p>
+    <p class="sub">The HKL plan. Save Wolf coins at G2, then jump grades during Ragnarök. Set how many Ragnaröks are finished. With a date set in the Ragnarök plan tab, it moves forward on its own.</p>
     <div class="plan-grid">
       <div class="col">
         <div class="fields">
@@ -317,18 +316,22 @@ var SHOP={G5:{ld:4.66,fx:0,wc:30,dc:1.3,fc:0},
 // ---------- state ----------
 var UNITS={vp:{M:0.001,B:1,T:1000},dragon:{K:0.001,M:1}}; // typed unit → stored unit (VP in B, Dragon in M)
 function clone(o){return JSON.parse(JSON.stringify(o));}
-var EXAMPLE={clan:{rag:7},jumps:{G5:1,G6:1,G7:1,G8:3},plan:{target:8,total:16,done:6,next:'',left:10,log:[{w:150,d:1.1,needW:118,needD:0.9},{w:90,d:0.6,needW:118,needD:0.9}]},logDUnit:'M',vpUnit:'B',dragonUnit:'M',grade:4,vp:1.2,acc:22,hero:35,proj:18000,gold:100000,wolf:40,dragon:2,forest:0,wood:30,iron:25,stone:28,t:4,m:2,g:1,pct:0};
+var EXAMPLE={clan:{rag:7},jumps:{G5:1,G6:1,G7:1,G8:3},plan:{target:8,total:16,done:6,next:'',left:10,log:[]},logDUnit:'M',vpUnit:'B',dragonUnit:'M',grade:4,vp:1.2,acc:22,hero:35,proj:18000,gold:100000,wolf:40,dragon:2,forest:0,wood:30,iron:25,stone:28,t:4,m:2,g:1,pct:0};
 var EMPTY={clan:{rag:1},jumps:{G5:1,G6:1,G7:1,G8:3},plan:{target:8,total:16,done:0,next:'',left:16,log:[]},logDUnit:'M',vpUnit:'B',dragonUnit:'M',grade:1,vp:0,acc:1,hero:1,proj:0,gold:0,wolf:0,dragon:0,forest:0,wood:0,iron:0,stone:0,t:0,m:0,g:0,pct:0};
 var FIELDS=['vp','acc','hero','proj','gold','wolf','dragon','forest','wood','iron','stone'];
 var S, isExample=false;
 function load(){try{var raw=localStorage.getItem('gp-state');if(raw){var saved=JSON.parse(raw);S=Object.assign(clone(EMPTY),saved);
     if(saved.plan&&saved.plan.done==null){ // older save: had "events left" and "next Ragnarök #"
       S.plan.done=Math.max(((saved.clan&&saved.clan.rag)||1)-1,0);S.plan.total=S.plan.done+(saved.plan.left!=null?saved.plan.left:10);S.plan.next='';}
-    syncRag();return;}}catch(e){}
+    syncRag();if(advanceByDate())save();return;}}catch(e){}
   S=clone(EXAMPLE);isExample=true;syncRag();}
 // Finished and season size are the source; "left" and the clan's next Ragnarök follow from them.
 function syncRag(){var P=S.plan;P.total=Math.min(Math.max(P.total||1,1),99);P.done=Math.min(Math.max(P.done||0,0),P.total);
   P.left=P.total-P.done;S.clan.rag=Math.min(P.done+1,16);}
+// Once a Ragnarök's day has passed, count it as finished and move the next date 4 days on.
+function advanceByDate(){var P=S.plan,moved=false;
+  while(P.next&&P.done<P.total&&daysUntil(P.next)<0){P.done++;P.next=addDays(P.next,RAG_EVERY);moved=true;}
+  syncRag();return moved;}
 // ---------- dates (Ragnarök every 4 days) ----------
 var RAG_EVERY=4;
 function isoOf(d){return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);}
@@ -602,13 +605,9 @@ function renderPlan(){
   var dn=document.getElementById('plan-dates');
   if(!P.left)dn.textContent='All Ragnaröks of the season are finished.';
   else if(P.next){var dd=daysUntil(P.next);
-    dn.textContent='Next: Ragnarök #'+(P.done+1)+' on '+fDate(P.next)+(dd>0?' (in '+dd+' day'+(dd===1?'':'s')+')':dd===0?' (today)':' (date passed, log it or update the date)')+
-      '. Last: #'+P.total+' on '+fDate(ragDate(P.total))+'. One every '+RAG_EVERY+' days.';}
+    dn.textContent='Next: Ragnarök #'+(P.done+1)+' on '+fDate(P.next)+(dd>0?' (in '+dd+' day'+(dd===1?'':'s')+')':dd===0?' (today)':'')+
+      '. Last: #'+P.total+' on '+fDate(ragDate(P.total))+'. One every '+RAG_EVERY+' days; once a date passes it counts as finished.';}
   else dn.textContent='Ragnarök comes every '+RAG_EVERY+' days. Set the next date to see when each one happens.';
-  document.getElementById('log-title').textContent=P.left?'Log Ragnarök #'+(P.done+1):'Season finished';
-  document.getElementById('log-add').disabled=!P.left;
-  [].forEach.call(document.querySelectorAll('#log-d-unit button'),function(b){b.setAttribute('aria-pressed',b.dataset.u===(S.logDUnit||'M')?'true':'false');});
-  document.getElementById('log-undo').disabled=!P.log.length;
 
   if(next>8){sum.innerHTML='<div class="alert ok">You have G8. Nothing left to save for.</div>';}
   else{
@@ -632,49 +631,40 @@ function renderPlan(){
 
 // The whole season, one row per Ragnarök: what happened, what is next, and what each coming event must bring.
 function clanStep(k){for(var i=0;i<CLAN.length;i++)if(k>=CLAN[i].a&&k<=CLAN[i].b)return CLAN[i].step;return '';}
-function loggedFor(k){var hit=null;S.plan.log.forEach(function(e,i){if((e.rag||i+1)===k)hit=e;});return hit;}
 function renderSeason(perW,perD,allDone){
-  var P=S.plan, hist=document.getElementById('plan-history'), showDate=!!P.next;
-  var h='<thead><tr><th>Ragnarök</th>'+(showDate?'<th>Date</th>':'')+'<th>Status</th><th style="text-align:left">Clan plan step</th><th>Wolf</th><th>Dragon</th><th>Wolf balance after</th></tr></thead><tbody>';
-  var cols=showDate?7:6;
-  h+='<tr class="next"><td colspan="'+(cols-1)+'" style="text-align:left;font-family:var(--f-body);font-weight:600">Your balance now</td><td><b>'+fM(S.wolf)+'</b></td></tr>';
+  var P=S.plan, hist=document.getElementById('plan-history'), showDate=!!P.next, pre=showDate?4:3;
+  var h='<thead><tr><th>Ragnarök</th>'+(showDate?'<th>Date</th>':'')+'<th>Status</th><th style="text-align:left">Clan plan step</th>'+
+    '<th>Collect Wolf</th><th>Collect Dragon</th><th>Have Wolf by then</th><th>Have Dragon by then</th></tr></thead><tbody>';
+  h+='<tr class="next"><td colspan="'+pre+'" style="text-align:left;font-family:var(--f-body);font-weight:600">Your balance now</td><td></td><td></td><td><b>'+fM(S.wolf)+'</b></td><td><b>'+fD(S.dragon)+'</b></td></tr>';
   for(var k=1;k<=P.total;k++){
-    var done=k<=P.done, isNext=k===P.done+1, e=done?loggedFor(k):null, ahead=k-P.done;
+    var done=k<=P.done, isNext=k===P.done+1, ahead=k-P.done, show=!done&&!allDone;
+    if(done){h+='<tr class="done"><td>#'+k+'</td>'+(showDate?'<td style="font-family:var(--f-body)">'+fDate(ragDate(k))+'</td>':'')+
+      '<td><span class="st ok">Done</span></td><td style="text-align:left;font-family:var(--f-body)">'+(clanStep(k)||'—')+'</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>';continue;}
     var st=done?'<span class="st ok">Done</span>':isNext?'<span class="st" style="background:var(--accent);color:#fff">Next</span>':'<span class="st" style="background:var(--bg);color:var(--muted)">Coming</span>';
-    var wolf=done?(e?fM(e.w)+' got':'—'):(allDone?'—':'+'+fM(perW)), dragon=done?(e?fD(e.d)+' got':'—'):(allDone?'—':'+'+fD(perD));
     h+='<tr class="'+(done?'done':'')+'"><td>#'+k+'</td>'+(showDate?'<td style="font-family:var(--f-body)">'+fDate(ragDate(k))+'</td>':'')+
       '<td>'+st+'</td><td style="text-align:left;font-family:var(--f-body)">'+(clanStep(k)||'—')+'</td>'+
-      '<td>'+wolf+'</td><td>'+dragon+'</td><td>'+(done||allDone?'—':fM(S.wolf+perW*ahead))+'</td></tr>';
+      '<td>'+(show?(isNext?'<b>':'')+'+'+fM(perW)+(isNext?'</b>':''):'')+'</td><td>'+(show?(isNext?'<b>':'')+'+'+fD(perD)+(isNext?'</b>':''):'')+'</td>'+
+      '<td>'+(show?fM(S.wolf+perW*ahead):'')+'</td><td>'+(show?fD(S.dragon+perD*ahead):'')+'</td></tr>';
   }
   hist.innerHTML=h+'</tbody>';
 }
-document.getElementById('log-d-unit').addEventListener('click',function(e){
-  var b=e.target.closest('button[data-u]');if(!b||b.dataset.u===S.logDUnit)return;
-  S.logDUnit=b.dataset.u;touch();renderPlan();}); // the typed number stays; the unit applies to it
 targetSel.addEventListener('change',function(){S.plan.target=+this.value;touch();renderPlan();});
 document.getElementById('plan-total').addEventListener('input',function(){var v=parseInt(this.value,10);if(isNaN(v))return;S.plan.total=v;syncRag();touch();renderPlan();});
 document.getElementById('plan-done').addEventListener('input',function(){var v=parseInt(this.value,10);if(isNaN(v))return;S.plan.done=v;syncRag();touch();renderPlan();});
-document.getElementById('plan-next').addEventListener('change',function(){S.plan.next=this.value||'';touch();renderPlan();});
-document.getElementById('log-add').addEventListener('click',function(){
-  var wEl=document.getElementById('log-w'),dEl=document.getElementById('log-d');
-  var w=Math.max(parseFloat(wEl.value)||0,0), d=Math.max(parseFloat(dEl.value)||0,0);
-  if(S.logDUnit==='K')d=d/1000;
-  if(!w&&!d){wEl.focus();return;}
-  var P=S.plan, t=totals(P.target), L=Math.max(P.left,1);
-  P.log.push({rag:P.done+1,w:w,d:d,needW:Math.max(t.w-S.wolf,0)/L,needD:Math.max(t.d-S.dragon,0)/L});
-  S.wolf+=w;S.dragon+=d;P.done=Math.min(P.done+1,P.total);if(P.next)P.next=addDays(P.next,RAG_EVERY);syncRag();
-  wEl.value='';dEl.value='';touch();renderAll();});
-document.getElementById('log-undo').addEventListener('click',function(){
-  var e=S.plan.log.pop();if(!e)return;
-  S.wolf=Math.max(S.wolf-e.w,0);S.dragon=Math.max(S.dragon-e.d,0);S.plan.done=Math.max(S.plan.done-1,0);if(S.plan.next)S.plan.next=addDays(S.plan.next,-RAG_EVERY);syncRag();touch();renderAll();});
+document.getElementById('plan-next').addEventListener('change',function(){S.plan.next=this.value||'';advanceByDate();touch();renderPlan();});
+// balance inputs in this tab write the same Wolf / Dragon as the Calculator tab
+document.getElementById('rb-wolf').addEventListener('input',function(){var v=parseFloat(this.value);S.wolf=isNaN(v)?0:Math.max(v,0);touch();renderInputs();renderResults();});
+document.getElementById('rb-dragon').addEventListener('input',function(){var v=parseFloat(this.value);S.dragon=(isNaN(v)?0:Math.max(v,0))*UNITS.dragon[S.dragonUnit];touch();renderInputs();renderResults();});
 
 function renderInputs(){
   FIELDS.forEach(function(id){document.getElementById(id).value=S[id]||S[id]===0?S[id]:'';});
   document.getElementById('proj').value=+(S.proj/1000).toFixed(3);
   document.getElementById('gold').value=+(S.gold/1000).toFixed(3);
+  [['rb-wolf',+S.wolf.toPrecision(6)],['rb-dragon',+(S.dragon/UNITS.dragon[S.dragonUnit]).toPrecision(6)]].forEach(function(x){
+    var el=document.getElementById(x[0]);if(document.activeElement!==el)el.value=x[1];});
   Object.keys(UNITS).forEach(function(f){
     document.getElementById(f).value=+(S[f]/(UNITS[f][S[f+'Unit']]||1)).toPrecision(6);
-    [].forEach.call(document.querySelectorAll('#'+f+'-unit button'),function(b){b.setAttribute('aria-pressed',b.dataset.u===S[f+'Unit']?'true':'false');});});
+    [].forEach.call(document.querySelectorAll('.seg[data-f="'+f+'"] button'),function(b){b.setAttribute('aria-pressed',b.dataset.u===S[f+'Unit']?'true':'false');});});
   [].forEach.call(chipsEl.children,function(c){c.setAttribute('aria-pressed',+c.dataset.n===S.grade?'true':'false');});
   updateFlag();
 }
