@@ -524,7 +524,7 @@ function totals(target){
     have.vp=Math.max(have.vp+r.rg.vp-r.need.total,0);have.forest=Math.max(have.forest-r.rg.forest,0);
     have.proj=Math.max(have.proj-r.q.proj,0);have.acc=Math.max(have.acc,r.q.acc);}
   return {w:w,d:d,runs:runs};}
-function fD(v){return S.dragonUnit==='K'?fN(v*1000)+'K':fM(v);}
+function fD(v){return fM(v);} // K under 1M, M above
 var targetSel=document.getElementById('plan-target');
 
 // ---------- Clan plan (HKL) ----------
@@ -605,7 +605,8 @@ function renderPlan(){
     dn.textContent='Next: Ragnarök #'+(P.done+1)+' on '+fDate(P.next)+(dd>0?' (in '+dd+' day'+(dd===1?'':'s')+')':dd===0?' (today)':' (date passed, log it or update the date)')+
       '. Last: #'+P.total+' on '+fDate(ragDate(P.total))+'. One every '+RAG_EVERY+' days.';}
   else dn.textContent='Ragnarök comes every '+RAG_EVERY+' days. Set the next date to see when each one happens.';
-  document.getElementById('log-title').textContent='Log Ragnarök #'+(P.log.length+1);
+  document.getElementById('log-title').textContent=P.left?'Log Ragnarök #'+(P.done+1):'Season finished';
+  document.getElementById('log-add').disabled=!P.left;
   [].forEach.call(document.querySelectorAll('#log-d-unit button'),function(b){b.setAttribute('aria-pressed',b.dataset.u===(S.logDUnit||'M')?'true':'false');});
   document.getElementById('log-undo').disabled=!P.log.length;
 
@@ -616,29 +617,36 @@ function renderPlan(){
     var h='<div class="bigs two">'+
       '<div class="big"><div class="v">'+(needW?fM(perW):'0')+'</div><div class="k">Wolf needed per event from now</div><div class="s">'+fM(needW)+' still to collect over '+L+' event'+(L===1?'':'s')+'</div></div>'+
       '<div class="big"><div class="v">'+(needD?fD(perD):'0')+'</div><div class="k">Dragon needed per event from now</div><div class="s">'+fD(needD)+' still to collect</div></div></div>';
-    var alerts=[];
-    if(!needW&&!needD)alerts.push('<div class="alert ok">You already have the coins for G'+P.target+'. Total cost: '+fM(t.w)+' Wolf, '+fD(t.d)+' Dragon.</div>');
+    // Everything is measured from your real balance now (coins you spent are already gone from it).
+    var alerts=['<div class="alert info" style="font-weight:400">You have <b>'+fM(S.wolf)+'</b> Wolf and <b>'+fD(S.dragon)+'</b> Dragon now. Reaching G'+P.target+' costs '+fM(t.w)+' Wolf and '+fD(t.d)+' Dragon in shop buys.</div>'];
+    if(!needW&&!needD)alerts.push('<div class="alert ok">Your balance already covers G'+P.target+'.</div>');
     else if(L<=0)alerts.push('<div class="alert bad">No events left. You are short '+fM(needW)+' Wolf and '+fD(needD)+' Dragon.</div>');
-    else if(P.log.length){
-      var avgW=P.log.reduce(function(a,e){return a+e.w;},0)/P.log.length, first=P.log[0].needW;
-      if(avgW>=perW)alerts.push('<div class="alert ok">On track. You average '+fM(avgW)+' Wolf per event and need '+fM(perW)+'.</div>');
-      else{var evs=avgW>0?Math.ceil(needW/avgW):Infinity;
-        alerts.push('<div class="alert bad">Behind. You average '+fM(avgW)+' Wolf per event but now need '+fM(perW)+' (+'+fM(perW-avgW)+'). '+
-          (isFinite(evs)?'At your average you need '+evs+' events, '+(evs-L)+' more than you have.':'')+'</div>');}
-      if(Math.abs(perW-first)>0.005)alerts.push('<div class="alert info">The target per event moved from '+fM(first)+' (Ragnarök #1) to '+fM(perW)+' now.</div>');
-    }else alerts.push('<div class="alert info">Collect at least '+fM(perW)+' Wolf and '+fD(perD)+' Dragon in each of the next '+L+' events.</div>');
+    else alerts.push('<div class="alert '+(perW>160.005?'bad':'ok')+'">Collect '+fM(perW)+' Wolf and '+fD(perD)+' Dragon in each of the next '+L+' events.'+(perW>160.005?' That is more than the 160M a full Wolf usually gives.':'')+'</div>');
     if(t.runs>L)alerts.push('<div class="alert bad">You need '+t.runs+' shop buys to reach G'+P.target+' but have '+L+' events. Earn more VP in battle to need fewer buys.</div>');
     else if(t.runs)alerts.push('<div class="alert ok" style="font-weight:400">Shop buys needed: '+t.runs+' of your '+L+' events.</div>');
     sum.innerHTML=h+alerts.join('');
   }
 
-  if(!P.log.length){hist.innerHTML='<tbody><tr><td style="text-align:left;font-family:var(--f-body);color:var(--muted)">No events logged yet. After your next Ragnarök, type the coins you got and press “Add to my coins”.</td></tr></tbody>';return;}
-  var rows='<thead><tr><th>Event</th><th>Wolf collected</th><th>Needed then</th><th>Difference</th><th>Dragon collected</th><th>Needed then</th></tr></thead><tbody>';
-  P.log.forEach(function(e,i){var diff=e.w-e.needW, ok=diff>=-0.005, pctW=e.needW>0?Math.min(e.w/e.needW*100,100):100;
-    rows+='<tr><td>Ragnarök #'+(i+1)+'</td><td>'+fM(e.w)+'<span class="mini"><i style="width:'+pctW.toFixed(0)+'%;background:'+(ok?'var(--ok)':'var(--bad)')+'"></i></span></td>'+
-      '<td>'+fM(e.needW)+'</td><td class="'+(ok?'pos':'neg')+'">'+(ok?'+'+fM(diff):'−'+fM(-diff))+'</td>'+
-      '<td class="'+(e.d>=e.needD-0.0005?'':'neg')+'">'+fD(e.d)+'</td><td>'+fD(e.needD)+'</td></tr>';});
-  hist.innerHTML=rows+'</tbody>';
+  renderSeason(perW||0,perD||0,next>8);
+}
+
+// The whole season, one row per Ragnarök: what happened, what is next, and what each coming event must bring.
+function clanStep(k){for(var i=0;i<CLAN.length;i++)if(k>=CLAN[i].a&&k<=CLAN[i].b)return CLAN[i].step;return '';}
+function loggedFor(k){var hit=null;S.plan.log.forEach(function(e,i){if((e.rag||i+1)===k)hit=e;});return hit;}
+function renderSeason(perW,perD,allDone){
+  var P=S.plan, hist=document.getElementById('plan-history'), showDate=!!P.next;
+  var h='<thead><tr><th>Ragnarök</th>'+(showDate?'<th>Date</th>':'')+'<th>Status</th><th style="text-align:left">Clan plan step</th><th>Wolf</th><th>Dragon</th><th>Wolf balance after</th></tr></thead><tbody>';
+  var cols=showDate?7:6;
+  h+='<tr class="next"><td colspan="'+(cols-1)+'" style="text-align:left;font-family:var(--f-body);font-weight:600">Your balance now</td><td><b>'+fM(S.wolf)+'</b></td></tr>';
+  for(var k=1;k<=P.total;k++){
+    var done=k<=P.done, isNext=k===P.done+1, e=done?loggedFor(k):null, ahead=k-P.done;
+    var st=done?'<span class="st ok">Done</span>':isNext?'<span class="st" style="background:var(--accent);color:#fff">Next</span>':'<span class="st" style="background:var(--bg);color:var(--muted)">Coming</span>';
+    var wolf=done?(e?fM(e.w)+' got':'—'):(allDone?'—':'+'+fM(perW)), dragon=done?(e?fD(e.d)+' got':'—'):(allDone?'—':'+'+fD(perD));
+    h+='<tr class="'+(done?'done':'')+'"><td>#'+k+'</td>'+(showDate?'<td style="font-family:var(--f-body)">'+fDate(ragDate(k))+'</td>':'')+
+      '<td>'+st+'</td><td style="text-align:left;font-family:var(--f-body)">'+(clanStep(k)||'—')+'</td>'+
+      '<td>'+wolf+'</td><td>'+dragon+'</td><td>'+(done||allDone?'—':fM(S.wolf+perW*ahead))+'</td></tr>';
+  }
+  hist.innerHTML=h+'</tbody>';
 }
 document.getElementById('log-d-unit').addEventListener('click',function(e){
   var b=e.target.closest('button[data-u]');if(!b||b.dataset.u===S.logDUnit)return;
@@ -653,7 +661,7 @@ document.getElementById('log-add').addEventListener('click',function(){
   if(S.logDUnit==='K')d=d/1000;
   if(!w&&!d){wEl.focus();return;}
   var P=S.plan, t=totals(P.target), L=Math.max(P.left,1);
-  P.log.push({w:w,d:d,needW:Math.max(t.w-S.wolf,0)/L,needD:Math.max(t.d-S.dragon,0)/L});
+  P.log.push({rag:P.done+1,w:w,d:d,needW:Math.max(t.w-S.wolf,0)/L,needD:Math.max(t.d-S.dragon,0)/L});
   S.wolf+=w;S.dragon+=d;P.done=Math.min(P.done+1,P.total);if(P.next)P.next=addDays(P.next,RAG_EVERY);syncRag();
   wEl.value='';dEl.value='';touch();renderAll();});
 document.getElementById('log-undo').addEventListener('click',function(){
