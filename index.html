@@ -249,8 +249,12 @@ details li{margin:3px 0}
       <div class="col">
         <div class="fields">
           <div class="f"><label for="plan-target">Goal grade</label><div class="in"><select id="plan-target"></select></div></div>
-          <div class="f"><label for="plan-left">Ragnarök events left</label><div class="in"><input id="plan-left" type="number" min="0" max="99" inputmode="numeric"></div></div>
+          <div class="f"><label for="plan-total">Ragnaröks in the season</label><div class="in"><input id="plan-total" type="number" min="1" max="99" inputmode="numeric"></div></div>
+          <div class="f"><label for="plan-done">Ragnaröks finished</label><div class="in"><input id="plan-done" type="number" min="0" max="99" inputmode="numeric"></div></div>
+          <div class="f"><label for="plan-next">Next Ragnarök date</label><div class="in"><input id="plan-next" type="date"></div></div>
+          <div class="f"><label>Left</label><div class="in"><input id="plan-left" type="text" readonly tabindex="-1" aria-label="Ragnaröks left"></div></div>
         </div>
+        <p class="note" style="margin:0" id="plan-dates">Ragnarök comes every 4 days. Set the next date to see when each one happens.</p>
         <div class="logbox">
           <div class="group-label" id="log-title" style="margin-top:0">Log Ragnarök #1</div>
           <div class="fields">
@@ -275,7 +279,7 @@ details li{margin:3px 0}
     <div class="plan-grid">
       <div class="col">
         <div class="fields">
-          <div class="f"><label for="clan-rag">Next Ragnarök (season #)</label><div class="in"><input id="clan-rag" type="number" min="1" max="16" inputmode="numeric"></div></div>
+          <div class="f"><label for="clan-rag">Ragnaröks finished</label><div class="in"><input id="clan-rag" type="number" min="0" max="16" inputmode="numeric"></div></div>
         </div>
         <div id="clan-summary" class="col" style="gap:10px"></div>
       </div>
@@ -313,12 +317,25 @@ var SHOP={G5:{ld:4.66,fx:0,wc:30,dc:1.3,fc:0},
 // ---------- state ----------
 var UNITS={vp:{M:0.001,B:1,T:1000},dragon:{K:0.001,M:1}}; // typed unit → stored unit (VP in B, Dragon in M)
 function clone(o){return JSON.parse(JSON.stringify(o));}
-var EXAMPLE={clan:{rag:7},jumps:{G5:1,G6:1,G7:1,G8:3},plan:{target:8,left:12,log:[{w:150,d:1.1,needW:118,needD:0.9},{w:90,d:0.6,needW:118,needD:0.9}]},logDUnit:'M',vpUnit:'B',dragonUnit:'M',grade:4,vp:1.2,acc:22,hero:35,proj:18000,gold:100000,wolf:40,dragon:2,forest:0,wood:30,iron:25,stone:28,t:4,m:2,g:1,pct:0};
-var EMPTY={clan:{rag:1},jumps:{G5:1,G6:1,G7:1,G8:3},plan:{target:8,left:10,log:[]},logDUnit:'M',vpUnit:'B',dragonUnit:'M',grade:1,vp:0,acc:1,hero:1,proj:0,gold:0,wolf:0,dragon:0,forest:0,wood:0,iron:0,stone:0,t:0,m:0,g:0,pct:0};
+var EXAMPLE={clan:{rag:7},jumps:{G5:1,G6:1,G7:1,G8:3},plan:{target:8,total:16,done:6,next:'',left:10,log:[{w:150,d:1.1,needW:118,needD:0.9},{w:90,d:0.6,needW:118,needD:0.9}]},logDUnit:'M',vpUnit:'B',dragonUnit:'M',grade:4,vp:1.2,acc:22,hero:35,proj:18000,gold:100000,wolf:40,dragon:2,forest:0,wood:30,iron:25,stone:28,t:4,m:2,g:1,pct:0};
+var EMPTY={clan:{rag:1},jumps:{G5:1,G6:1,G7:1,G8:3},plan:{target:8,total:16,done:0,next:'',left:16,log:[]},logDUnit:'M',vpUnit:'B',dragonUnit:'M',grade:1,vp:0,acc:1,hero:1,proj:0,gold:0,wolf:0,dragon:0,forest:0,wood:0,iron:0,stone:0,t:0,m:0,g:0,pct:0};
 var FIELDS=['vp','acc','hero','proj','gold','wolf','dragon','forest','wood','iron','stone'];
 var S, isExample=false;
-function load(){try{var raw=localStorage.getItem('gp-state');if(raw){S=Object.assign(clone(EMPTY),JSON.parse(raw));return;}}catch(e){}
-  S=clone(EXAMPLE);isExample=true;}
+function load(){try{var raw=localStorage.getItem('gp-state');if(raw){var saved=JSON.parse(raw);S=Object.assign(clone(EMPTY),saved);
+    if(saved.plan&&saved.plan.done==null){ // older save: had "events left" and "next Ragnarök #"
+      S.plan.done=Math.max(((saved.clan&&saved.clan.rag)||1)-1,0);S.plan.total=S.plan.done+(saved.plan.left!=null?saved.plan.left:10);S.plan.next='';}
+    syncRag();return;}}catch(e){}
+  S=clone(EXAMPLE);isExample=true;syncRag();}
+// Finished and season size are the source; "left" and the clan's next Ragnarök follow from them.
+function syncRag(){var P=S.plan;P.total=Math.min(Math.max(P.total||1,1),99);P.done=Math.min(Math.max(P.done||0,0),P.total);
+  P.left=P.total-P.done;S.clan.rag=Math.min(P.done+1,16);}
+// ---------- dates (Ragnarök every 4 days) ----------
+var RAG_EVERY=4;
+function isoOf(d){return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);}
+function addDays(iso,n){var d=new Date(iso+'T00:00:00');d.setDate(d.getDate()+n);return isoOf(d);}
+function ragDate(k){return S.plan.next?addDays(S.plan.next,(k-(S.plan.done+1))*RAG_EVERY):'';} // date of Ragnarök #k
+function fDate(iso){return iso?new Date(iso+'T00:00:00').toLocaleDateString([], {weekday:'short',day:'numeric',month:'short'}):'';}
+function daysUntil(iso){var t=new Date();t.setHours(0,0,0,0);return Math.round((new Date(iso+'T00:00:00')-t)/86400000);}
 // Saves to this browser. Called on every change (autosave) and by the Save button.
 function save(){
   var t=new Date();
@@ -342,7 +359,7 @@ function fM(v){ // v in millions
   if(v>=1e6)return trim(v/1e6,2)+'T';
   if(v>=1000)return trim(v/1000,2)+'B';
   if(v>=1)return trim(v,2)+'M';
-  return trim(v*1000,0)+'K';}
+  return trim(v*1000,1)+'K';}
 function fK(v){return trim(v/1000,2)+'K';} // blueprints are counted in thousands
 function fN(v){return Math.round(v).toLocaleString('en-US');}
 function gcol(g){return 'var(--'+g.toLowerCase()+')';}
@@ -385,7 +402,10 @@ FIELDS.forEach(function(id){document.getElementById(id).addEventListener('input'
   S[id]=x;touch();renderResults();});});
 [].forEach.call(document.querySelectorAll('.seg[data-f]'),function(seg){seg.addEventListener('click',function(e){
   var f=seg.dataset.f,b=e.target.closest('button[data-u]');if(!b||b.dataset.u===S[f+'Unit'])return;
-  S[f+'Unit']=b.dataset.u;touch();renderInputs();renderPlan();});});
+  // the number you typed stays; the new unit applies to it (63.5 + M = 63.5M)
+  var v=parseFloat(document.getElementById(f).value);
+  S[f+'Unit']=b.dataset.u;if(!isNaN(v))S[f]=Math.max(v,0)*UNITS[f][b.dataset.u];
+  touch();renderInputs();renderResults();});});
 
 function touch(){if(isExample){isExample=false;}save();updateFlag();}
 function updateFlag(){document.getElementById('example-flag').textContent=isExample?'Showing example numbers. Replace them with yours.':'Type what you have now. Results update as you type. Saved in this browser.';}
@@ -520,7 +540,7 @@ function planBalanceAfter(r){var bal=0;CLAN.forEach(function(c){for(var x=c.a;x<
 
 function renderClan(){
   var r=S.clan.rag, el=document.getElementById('clan-summary'), rEl=document.getElementById('clan-rag');
-  if(document.activeElement!==rEl)rEl.value=r;
+  if(document.activeElement!==rEl)rEl.value=S.plan.done;
   var total=holdFrom(5), out=[];
   if(r<=CLAN_SAVE_END){
     var left=CLAN_SAVE_END-Math.max(r,4)+1, need=Math.max(CLAN_SAVE_GOAL-S.wolf,0), per=need/left;
@@ -540,12 +560,12 @@ function renderClan(){
   el.innerHTML=out.join('');
 
   // timeline
-  var bal=0,h='<thead><tr><th>Ragnarök</th><th>Step</th><th>Wolf</th><th>Plan balance</th></tr></thead><tbody>';
+  var bal=0,h='<thead><tr><th>Ragnarök</th><th>Step</th><th>Wolf</th><th>Plan balance</th>'+(S.plan.next?'<th>Date</th>':'')+'</tr></thead><tbody>';
   CLAN.forEach(function(c){
     var n=c.b-c.a+1, inc=c.inc*n, cost=c.jump?jumpCost(c.jump):0; bal+=inc-cost;
     var state=r>c.b?'done':(r>=c.a?'next':'');
     h+='<tr class="'+state+'"><td>'+(c.a===c.b?c.a:c.a+'–'+c.b)+'</td><td style="text-align:left;font-family:var(--f-body)">'+c.step+(state==='next'?' <span class="st ok">now</span>':'')+'</td>'+
-      '<td>'+(inc?'+'+fM(inc):'')+(cost?'<span class="neg">−'+fM(cost)+'</span>':'')+(!inc&&!cost?'—':'')+'</td><td>'+fM(Math.max(bal,0))+'</td></tr>';});
+      '<td>'+(inc?'+'+fM(inc):'')+(cost?'<span class="neg">−'+fM(cost)+'</span>':'')+(!inc&&!cost?'—':'')+'</td><td>'+fM(Math.max(bal,0))+'</td>'+(S.plan.next?'<td style="font-family:var(--f-body)">'+fDate(ragDate(c.a))+'</td>':'')+'</tr>';});
   document.getElementById('clan-steps').innerHTML=h+'</tbody>';
 
   // before each jump
@@ -567,8 +587,8 @@ function renderClan(){
 document.getElementById('jumps').addEventListener('click',function(e){
   var b=e.target.closest('button[data-j]');if(!b)return;var g=b.dataset.j;
   S.jumps[g]=Math.min(Math.max(S.jumps[g]+(+b.dataset.d),0),6);touch();renderClan();});
-document.getElementById('clan-rag').addEventListener('input',function(){var v=parseInt(this.value,10);
-  S.clan.rag=isNaN(v)?1:Math.min(Math.max(v,1),16);touch();renderClan();});
+document.getElementById('clan-rag').addEventListener('input',function(){var v=parseInt(this.value,10);if(isNaN(v))return;
+  S.plan.done=v;syncRag();touch();renderPlan();});
 
 function renderPlan(){
   renderClan();updateTabCounts();
@@ -577,7 +597,14 @@ function renderPlan(){
   var opts='';for(var n=Math.min(next,8);n<=8;n++)opts+='<option value="'+n+'">G'+n+'</option>';
   if(targetSel.innerHTML!==opts)targetSel.innerHTML=opts;
   P.target=Math.min(Math.max(P.target,next),8);targetSel.value=P.target;targetSel.disabled=next>8;
-  var leftEl=document.getElementById('plan-left');if(document.activeElement!==leftEl)leftEl.value=P.left;
+  [['plan-total',P.total],['plan-done',P.done],['plan-next',P.next||'']].forEach(function(x){var el=document.getElementById(x[0]);if(document.activeElement!==el)el.value=x[1];});
+  document.getElementById('plan-left').value=P.left+' of '+P.total;
+  var dn=document.getElementById('plan-dates');
+  if(!P.left)dn.textContent='All Ragnaröks of the season are finished.';
+  else if(P.next){var dd=daysUntil(P.next);
+    dn.textContent='Next: Ragnarök #'+(P.done+1)+' on '+fDate(P.next)+(dd>0?' (in '+dd+' day'+(dd===1?'':'s')+')':dd===0?' (today)':' (date passed, log it or update the date)')+
+      '. Last: #'+P.total+' on '+fDate(ragDate(P.total))+'. One every '+RAG_EVERY+' days.';}
+  else dn.textContent='Ragnarök comes every '+RAG_EVERY+' days. Set the next date to see when each one happens.';
   document.getElementById('log-title').textContent='Log Ragnarök #'+(P.log.length+1);
   [].forEach.call(document.querySelectorAll('#log-d-unit button'),function(b){b.setAttribute('aria-pressed',b.dataset.u===(S.logDUnit||'M')?'true':'false');});
   document.getElementById('log-undo').disabled=!P.log.length;
@@ -615,11 +642,11 @@ function renderPlan(){
 }
 document.getElementById('log-d-unit').addEventListener('click',function(e){
   var b=e.target.closest('button[data-u]');if(!b||b.dataset.u===S.logDUnit)return;
-  var dEl=document.getElementById('log-d'),v=parseFloat(dEl.value);
-  if(!isNaN(v))dEl.value=b.dataset.u==='K'?+(v*1000).toFixed(3):+(v/1000).toFixed(6); // keep the typed amount the same
-  S.logDUnit=b.dataset.u;touch();renderPlan();});
+  S.logDUnit=b.dataset.u;touch();renderPlan();}); // the typed number stays; the unit applies to it
 targetSel.addEventListener('change',function(){S.plan.target=+this.value;touch();renderPlan();});
-document.getElementById('plan-left').addEventListener('input',function(){var v=parseInt(this.value,10);S.plan.left=isNaN(v)?0:Math.min(Math.max(v,0),99);touch();renderPlan();});
+document.getElementById('plan-total').addEventListener('input',function(){var v=parseInt(this.value,10);if(isNaN(v))return;S.plan.total=v;syncRag();touch();renderPlan();});
+document.getElementById('plan-done').addEventListener('input',function(){var v=parseInt(this.value,10);if(isNaN(v))return;S.plan.done=v;syncRag();touch();renderPlan();});
+document.getElementById('plan-next').addEventListener('change',function(){S.plan.next=this.value||'';touch();renderPlan();});
 document.getElementById('log-add').addEventListener('click',function(){
   var wEl=document.getElementById('log-w'),dEl=document.getElementById('log-d');
   var w=Math.max(parseFloat(wEl.value)||0,0), d=Math.max(parseFloat(dEl.value)||0,0);
@@ -627,11 +654,11 @@ document.getElementById('log-add').addEventListener('click',function(){
   if(!w&&!d){wEl.focus();return;}
   var P=S.plan, t=totals(P.target), L=Math.max(P.left,1);
   P.log.push({w:w,d:d,needW:Math.max(t.w-S.wolf,0)/L,needD:Math.max(t.d-S.dragon,0)/L});
-  S.wolf+=w;S.dragon+=d;P.left=Math.max(P.left-1,0);S.clan.rag=Math.min(S.clan.rag+1,16);
+  S.wolf+=w;S.dragon+=d;P.done=Math.min(P.done+1,P.total);if(P.next)P.next=addDays(P.next,RAG_EVERY);syncRag();
   wEl.value='';dEl.value='';touch();renderAll();});
 document.getElementById('log-undo').addEventListener('click',function(){
   var e=S.plan.log.pop();if(!e)return;
-  S.wolf=Math.max(S.wolf-e.w,0);S.dragon=Math.max(S.dragon-e.d,0);S.plan.left+=1;S.clan.rag=Math.max(S.clan.rag-1,1);touch();renderAll();});
+  S.wolf=Math.max(S.wolf-e.w,0);S.dragon=Math.max(S.dragon-e.d,0);S.plan.done=Math.max(S.plan.done-1,0);if(S.plan.next)S.plan.next=addDays(S.plan.next,-RAG_EVERY);syncRag();touch();renderAll();});
 
 function renderInputs(){
   FIELDS.forEach(function(id){document.getElementById(id).value=S[id]||S[id]===0?S[id]:'';});
